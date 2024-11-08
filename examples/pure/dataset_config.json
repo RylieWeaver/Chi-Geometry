@@ -1,0 +1,6 @@
+{
+    "num_samples": 5000,
+    "type": "pure",
+    "points": 4,
+    "save_path": "dataset.pt"
+}

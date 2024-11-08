@@ -1,0 +1,7 @@
+{
+    "num_samples": 5000,
+    "type": "crossed",
+    "chirality_distance": 1,
+    "species_range": 10,
+    "save_path": "dataset.pt"
+}
