@@ -12,6 +12,7 @@ Set up your environment, generate a dataset, and visualize it in just 3 steps:
 
 ```bash
 # 1. Set up environment
+git clone https://github.com/RylieWeaver/Chi-Geometry.git
 cd Chi-Geometry
 conda env create -f environment.yml -n chi-geometry
 conda activate chi-geometry
@@ -47,12 +48,13 @@ Sets the variety of unique atom types (species) available for random assignment 
 Set up your environment, generate a dataset, and train an E(3)-equivariant model in just two steps:
 
 ```bash
-# 1. Set up the environment
+# 1. Set up environment
+git clone https://github.com/RylieWeaver/Chi-Geometry.git
 cd Chi-Geometry
 conda env create -f environment.yml -n chi-geometry
 conda activate chi-geometry
 
-# 2. Run the example
+# 2. Run example
 cd examples/classic
 python main.py
 ```
