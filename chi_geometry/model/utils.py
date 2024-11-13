@@ -8,6 +8,7 @@ from torch_scatter import scatter
 def load_model_json(file_path):
     # Default arguments
     default_args = {
+        # Learning parameters
         'epochs': 75,
         'batch_size': 128,
         'lr': 0.001,
