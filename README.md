@@ -16,7 +16,7 @@ conda env create -f environment.yml
 conda activate chi-geometry
 
 # 2. Generate dataset
-cd dataset
+cd chi_geometry/dataset
 python create_dataset.py
 
 # 3. Visualize dataset (optional)
@@ -39,3 +39,18 @@ Specifies the number of layers or "steps" between the chiral center and the ends
 
 ### Species Range
 Sets the variety of unique atom types (species) available for random assignment within the chiral configuration, allowing for flexible complexity.
+
+
+## Quick Example
+
+Set up your environment, generate a dataset, and train an E(3)-equivariant model in just two steps:
+
+```bash
+# 1. Set up the environment
+conda env create -f environment.yml
+conda activate chi-geometry
+
+# 2. Run the example
+cd examples
+python main.py
+```
