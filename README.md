@@ -12,6 +12,7 @@ Set up your environment, generate a dataset, and visualize it in just 3 steps:
 
 ```bash
 # 1. Set up environment
+cd Chi-Geometry
 conda env create -f environment.yml
 conda activate chi-geometry
 
@@ -47,6 +48,7 @@ Set up your environment, generate a dataset, and train an E(3)-equivariant model
 
 ```bash
 # 1. Set up the environment
+cd Chi-Geometry
 conda env create -f environment.yml
 conda activate chi-geometry
 
