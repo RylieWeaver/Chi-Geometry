@@ -1,9 +1,10 @@
 # Chi-Geometry
 Welcome to **Chi-Geometry!** A repository to easily generate benchmark datasets for chiral-aware machine learning models.
 
-Chi-Geometry lets you generate and explore chiral configurations without getting into the details of chemistry or chemical datasets/softwares. Also, it explores chirality in a purely geometric sense—ideal for testing model sensitivity to chirality without strict chemical constraints.
+Chi-Geometry enables you to create and explore chiral configurations without delving into chemistry-specific details. It represents chirality in a purely geometric way, making it ideal for testing model sensitivity to chirality without strict chemical constraints.
 
 ![Chiral Configurations](images/configurations_table.png)
+
 
 ## Quick Start
 
@@ -22,10 +23,19 @@ python create_dataset.py
 python plot.py
 ```
 
+
 ## Configurations
 
-There are three key configurations inside of Chi-Geometry: Type, Distance, and Species-Range
+Chi-Geometry provides three main configuration options: **Type**, **Distance**, and **Species Range**.
 
-(1) Type: Type allows some flexibility in terms of the chiral configuration which is set up. There are the simple configurations, which have no complexities. They have the chiral center and 3 chains of subtituents, no more complexity. Crossed configurations also just have a chiral center and 3 substituent chains, but the connections are crossed in-between the chains. Classic configurations are modelled after how we actually find chirality in chemistry. Although chirality only takes 3 substituents to exist, in chemistry, it usually happens with 4, so the classic configurations have 4 substituent chains. NOTE: explain substituents or use easier wording. 
-(2) Distance: Distance shows the amount of connections away the chirality exists. In all types, the intermediate layers between the chiral center and the chiral substituents are all the same atom, hence providing no distinction between chiral configurations until the end points in the substituent chains. NOTE: explain this better and more succinctly here.
-(3) Species Range: The amount of possible node types that can be randomly chosen to make the chiral configuration.
+1. **Type**  
+   This option defines the structural arrangement of the chiral configuration:
+   - **Simple**: A chiral center with three straightforward chains extending from it.
+   - **Crossed**: Similar to the simple configuration, but with "crossed" connections between the chains to add complexity.
+   - **Classic**: Reflects how chirality typically appears in chemistry, with a chiral center connected to four chains.
+
+2. **Distance**  
+   Specifies the number of layers or "steps" between the chiral center and the ends of the chains. All intermediate layers consist of the same atom type, so the unique chiral configuration is only defined at the chain endpoints.
+
+3. **Species Range**  
+   Sets the variety of unique atom types (species) available for random assignment within the chiral configuration, allowing for flexible complexity.
