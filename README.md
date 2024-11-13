@@ -51,6 +51,6 @@ conda env create -f environment.yml
 conda activate chi-geometry
 
 # 2. Run the example
-cd examples
+cd examples/classic
 python main.py
 ```
