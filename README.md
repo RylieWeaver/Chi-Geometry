@@ -24,7 +24,7 @@ python plot.py
 ```
 
 
-## Configurations
+## Configuration Options
 
 Chi-Geometry provides three main configuration options:
 
