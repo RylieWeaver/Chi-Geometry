@@ -26,7 +26,7 @@ python plot.py
 
 ## Configuration Options
 
-Chi-Geometry provides three main configuration options:
+Chi-Geometry provides three main configuration options which are read from json:
 
 ### Type
 This option defines the structural arrangement of the chiral configuration:
