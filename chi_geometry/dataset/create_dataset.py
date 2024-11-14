@@ -46,13 +46,13 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10):
     # Step 6: Arrange atoms
     if clockwise:
         # Sort quadruplet atoms in ascending order (smallest to largest)
-        triplet_atoms.sort()
+        triplet_atoms.sort(reverse=True)
         chirality_value = 1
         chirality_tag = [0, 1, 0]
         chirality_str = 'R'
     else:
         # Sort quadruplet atoms in descending order (largest to smallest)
-        triplet_atoms.sort(reverse=True)
+        triplet_atoms.sort()
         chirality_value = 2
         chirality_tag = [0, 0, 1]
         chirality_str = 'S'
@@ -155,13 +155,13 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10):
     # Step 6: Arrange atoms
     if clockwise:
         # Sort other atoms in ascending order (smallest to largest)
-        triplet_atoms.sort()
+        triplet_atoms.sort(reverse=True)
         chirality_value = 1
         chirality_tag = [0, 1, 0]
         chirality_str = 'R'
     else:
         # Sort other atoms in descending order (largest to smallest)
-        triplet_atoms.sort(reverse=True)
+        triplet_atoms.sort()
         chirality_value = 2
         chirality_tag = [0, 0, 1]
         chirality_str = 'S'
@@ -260,13 +260,13 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10):
     # Step 6: Arrange atoms
     if clockwise:
         # Sort other atoms in ascending order (smallest to largest)
-        triplet_atoms.sort()
+        triplet_atoms.sort(reverse=True)
         chirality_value = 1
         chirality_tag = [0, 1, 0]
         chirality_str = 'R'
     else:
         # Sort other atoms in descending order (largest to smallest)
-        triplet_atoms.sort(reverse=True)
+        triplet_atoms.sort()
         chirality_value = 2
         chirality_tag = [0, 0, 1]
         chirality_str = 'S'
