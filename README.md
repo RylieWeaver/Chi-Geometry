@@ -14,6 +14,7 @@ Set up your environment, generate a dataset, and visualize it in just 3 steps:
 # 1. Set up environment
 git clone https://github.com/RylieWeaver/Chi-Geometry.git
 cd Chi-Geometry
+export PYTHONPATH=$(pwd)
 conda env create -f environment.yml -n chi-geometry
 conda activate chi-geometry
 
@@ -51,6 +52,7 @@ Set up your environment, generate a dataset, and train an E(3)-equivariant model
 # 1. Set up environment
 git clone https://github.com/RylieWeaver/Chi-Geometry.git
 cd Chi-Geometry
+export PYTHONPATH=$(pwd)
 conda env create -f environment.yml -n chi-geometry
 conda activate chi-geometry
 
