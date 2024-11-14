@@ -51,7 +51,7 @@ def plot_graph(dataset_path='dataset.pt', cmap='viridis'):
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    plt.title(f"Graph Visualization with Chiral Center of Type: {graph.chirality_str[0][0]}")
+    plt.title(f"Graph Visualization | Chiral Center has Label: {graph.chirality_str[0][0]}")
 
     # Add color bar for atomic numbers
     sm = cm.ScalarMappable(cmap=cmap, norm=norm)
