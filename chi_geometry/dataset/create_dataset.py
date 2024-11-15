@@ -515,7 +515,6 @@ def main():
     save_path = args['save_path']
 
     # Create
-    save_path = 'dataset.pt'
     print("Creating dataset...")
     create_dataset(
         num_samples=num_samples,
