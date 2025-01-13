@@ -58,7 +58,10 @@ def plot_graph(dataset_path='dataset.pt', cmap='viridis'):
     sm.set_array([])
     cbar = plt.colorbar(sm, ax=ax, pad=0.1, shrink=0.7)
     cbar.set_label('Node Species')
-
+    
+    # Save the plot
+    plt.savefig('graph_plot.png', dpi=300, bbox_inches='tight')
+    
     # Show the plot (interactive)
     plt.show()
 
