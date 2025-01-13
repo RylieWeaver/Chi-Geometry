@@ -196,13 +196,12 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
     base_angles = [0, 2 * math.pi / 3, 4 * math.pi / 3]
     for _ in range(1, chirality_distance + 1):
         # Deterministic logic (simple but degenerate)
-        # if not randomness:
         if False:
             positions = [[0.0, 0.0, z_layer]]  # Chiral center
             layer_distance = 0.5
             angle_noises = [0, 0, 0]
             z_noises = [0, 0, 0]
-        # Randomized logic (more complex and realistic)
+        # Randomized noise logic (more complex task)
         else:
             angle = random.uniform(0, 2 * math.pi)
             radius = random.uniform(0.0, 1.0)
@@ -210,14 +209,14 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
                 [math.cos(angle) * radius, math.sin(angle) * radius, z_layer]
             ]  # Chiral center with random xy-position
             # positions = [[0.0, 0.0, z_layer]]  # Chiral center at [0,0,1]
-            layer_distance = random.uniform(1.3, 1.5)
+            layer_distance = random.uniform(0.3, 2.0)
             angle_noises = [
                 random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)
             ]  # This must be less than or equal to math.pi/3 to maintain layer ordering
             # angle_noises = [0, 0, 0]
             z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
             # z_noises = [0, 0, 0]
-            radii = [random.uniform(0.0, radius) for _ in range(3)]
+            radii = [random.uniform(radius, 1.0) for _ in range(3)]
         # Append positions accordingly
         z_layer -= layer_distance
         for angle, angle_noise, radius, z_noise in zip(
