@@ -191,40 +191,49 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
         chirality_tag = [0, 0, 1]
         chirality_str = "S"
 
+    # ------------------------------------
     # Step 7: Assign positions with layers
-    z_layer = 1.0
+    # ------------------------------------
     base_angles = [0, 2 * math.pi / 3, 4 * math.pi / 3]
-    for _ in range(1, chirality_distance + 1):
-        # Deterministic logic (simple but degenerate)
-        if False:
-            positions = [[0.0, 0.0, z_layer]]  # Chiral center
-            layer_distance = 0.5
+    positions = []
+    z_layer = 1.0
+
+    # Step 7.1: Chiral Center position
+    if not noise:
+        # Deterministic first position at (0,0,1)
+        positions.append([0.0, 0.0, z_layer])
+    else:
+        # Randomize the first position on the xy-plane at z=1
+        center_angle = random.uniform(0, 2 * math.pi)
+        center_radius = random.uniform(0.0, 1.0)
+        center_x = math.cos(center_angle) * center_radius
+        center_y = math.sin(center_angle) * center_radius
+        positions.append([center_x, center_y, z_layer])
+
+    # Step 7.2: Following layer positions
+    for _ in range(chirality_distance):
+        if not noise:
+            layer_distance = 0.5  # deterministic
             angle_noises = [0, 0, 0]
             z_noises = [0, 0, 0]
-        # Randomized noise logic (more complex task)
+            radii = [1.0, 1.0, 1.0]
         else:
-            angle = random.uniform(0, 2 * math.pi)
-            radius = random.uniform(0.0, 1.0)
-            positions = [
-                [math.cos(angle) * radius, math.sin(angle) * radius, z_layer]
-            ]  # Chiral center with random xy-position
-            # positions = [[0.0, 0.0, z_layer]]  # Chiral center at [0,0,1]
             layer_distance = random.uniform(0.3, 2.0)
-            angle_noises = [
-                random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)
-            ]  # This must be less than or equal to math.pi/3 to maintain layer ordering
-            # angle_noises = [0, 0, 0]
+            angle_noises = [random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)]
             z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
-            # z_noises = [0, 0, 0]
-            radii = [random.uniform(radius, 1.0) for _ in range(3)]
-        # Append positions accordingly
+            radii = [random.uniform(0.5, 1.0) for _ in range(3)]
+
+        # Move down the z-axis for this layer
         z_layer -= layer_distance
+        # Append 3 new points for this layer
         for angle, angle_noise, radius, z_noise in zip(
             base_angles, angle_noises, radii, z_noises
         ):
-            x = math.cos(angle + angle_noise) * radius
-            y = math.sin(angle + angle_noise) * radius
-            positions.append([x, y, z_layer + z_noise])
+            final_angle = angle + angle_noise
+            x = math.cos(final_angle) * radius
+            y = math.sin(final_angle) * radius
+            z = z_layer + z_noise
+            positions.append([x, y, z])
     # positions = torch.tensor([[1,1,1], [1,-1,-1], [-1,1,-1], [-1,-1,1]], dtype=torch.float)
 
     # Step 8: Create edge connections
