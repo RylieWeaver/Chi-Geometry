@@ -1,5 +1,6 @@
 # General
 import os
+import json
 import datetime
 
 # Torch
@@ -50,6 +51,15 @@ def train_model(distance):
     training_log_path = os.path.join(run_dir, "training_log.txt")
     final_results_path = os.path.join(run_dir, "final_results.txt")
 
+    # Update and save model args
+    layers = (
+        distance + 3
+    )  # Number of layers is always distance + 3 to ensure enough message-passing for chirality awareness
+    model_args["layers"] = layers
+    model_args_path = os.path.join(run_dir, "model_config.json")
+    with open(model_args_path, "w") as f:
+        json.dump(model_args, f)
+
     # Device
     device = torch.device(
         "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
@@ -81,9 +91,6 @@ def train_model(distance):
 
     # Initialize the model, optimizer, and loss function
     num_classes = model_args["num_classes"]
-    layers = (
-        distance + 3
-    )  # Number of layers is always distance + 3 to ensure enough message-passing for chirality awareness
     model = Network(
         irreps_in=o3.Irreps(model_args["irreps_in"]),
         irreps_hidden=o3.Irreps(model_args["irreps_hidden"]),
