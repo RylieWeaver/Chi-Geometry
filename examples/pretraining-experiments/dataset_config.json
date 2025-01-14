@@ -1,0 +1,7 @@
+{
+    "num_samples": 3000,
+    "type": "simple",
+    "chirality_distance": 1,
+    "species_range": 15,
+    "save_path": "dataset.pt"
+}

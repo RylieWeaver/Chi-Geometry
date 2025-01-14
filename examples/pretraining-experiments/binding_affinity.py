@@ -8,7 +8,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 import torch.nn.functional as F
 from torch_geometric.data import Data, InMemoryDataset
-from hydragnn.preprocess import update_predicted_values
+
 
 # Define dataset download URLs
 urls = {
@@ -38,7 +38,9 @@ def mol_to_pyg_data(row, mol):
     atom_y = []
     for atom in mol.GetAtoms():
         atomic_number = atom.GetAtomicNum()
-        atomic_one_hot = F.one_hot(torch.tensor(atomic_number), num_classes=118)
+        atomic_one_hot = F.one_hot(
+            torch.tensor(atomic_number - 1), num_classes=118
+        ).float()
         atom_features.append(atomic_one_hot)
     atom_features = torch.stack(atom_features)
 
@@ -69,12 +71,13 @@ def mol_to_pyg_data(row, mol):
         raise ValueError(f'Molecule {row["ID"]} does not have 3D coordinates')
 
     # Target value
-    binding_efficiency = torch.tensor(row["top_score"], dtype=torch.float).unsqueeze(0)
+    binding_affinity = torch.tensor(row["top_score"], dtype=torch.float).unsqueeze(0)
 
     # Create PyTorch Geometric Data object
     data = Data(
         x=atom_features,
-        y=binding_efficiency,
+        atomic_numbers_one_hot=atom_features,
+        y=binding_affinity,
         edge_index=edge_index,
         edge_attr=edge_features,
         pos=pos,
@@ -90,7 +93,7 @@ def process_and_save(split):
         data_df = pickle.load(f)
 
     data_list = []
-    data_df = data_df.sample(frac=0.01)  # Shuffle the dataset
+    data_df = data_df.sample(frac=0.1)  # Shuffle and subset the data
     # data_df = data_df[:3000]
     for idx, row in tqdm(
         data_df.iterrows(), total=len(data_df), desc=f"Processing {split} dataset"

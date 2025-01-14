@@ -1,5 +1,6 @@
 # General
 import os
+import json
 import datetime
 
 # Torch
@@ -76,6 +77,9 @@ def pretrain_model():
     best_model_path = os.path.join(run_dir, "best_model.pt")
     training_log_path = os.path.join(run_dir, "training_log.txt")
     final_results_path = os.path.join(run_dir, "final_results.txt")
+    model_args_path = os.path.join(run_dir, "model_args.json")
+    with open(model_args_path, "w") as f:
+        json.dump(model_args, f, indent=4)
 
     # Device
     device = torch.device(
@@ -280,12 +284,11 @@ def main():
     # Collect datasets
     # create_composite_dataset(dataset_types, distances)
 
-    # # Train models
-    for dist in distances:
-        print(f"Pre-Training composite model...")
-        pretrain_model()
+    # Train models
+    print(f"Pre-Training composite model...")
+    pretrain_model()
 
-    # print("Experiment complete.")
+    print("Experiment complete.")
 
 
 if __name__ == "__main__":
