@@ -15,7 +15,7 @@ from chi_geometry.dataset import load_dataset_json, center_and_rotate_positions
 
 
 # NOTE Classic chiral configuration as defined in chemistry
-def create_classic_chiral_instance(chirality_distance=1, species_range=10):
+def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise=False):
     # Step 0: Assert necessary conditions
     assert (
         chirality_distance >= 1
@@ -83,6 +83,60 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10):
             z = 1.0 - layer * layer_distance
             positions.append([x, y, z])
 
+    # ------------------------------------
+    # Step 7: Assign positions with layers
+    # ------------------------------------
+    base_angles = [0, 2 * math.pi / 3, 4 * math.pi / 3]
+    positions = []
+    z_layer = 1.0
+    z_toplayer = 1.0
+    z_bottomlayer = 1.0
+
+    # Step 7.1: Chiral Center position
+    if not noise:
+        # Deterministic first position at (0,0,1)
+        positions.append([0.0, 0.0, z_layer])
+    else:
+        # Randomize the first position on the xy-plane at z=1
+        center_angle = random.uniform(0, 2 * math.pi)
+        center_radius = random.uniform(0.0, 1.0)
+        center_x = math.cos(center_angle) * center_radius
+        center_y = math.sin(center_angle) * center_radius
+        positions.append([center_x, center_y, z_layer])
+
+    # Step 7.2: Following layer positions
+    for _ in range(chirality_distance):
+        if not noise:
+            layer_distance = 0.5  # deterministic
+            angle_noises = [0, 0, 0, 0]
+            z_noises = [0, 0, 0, 0]
+            radii = [0.0, 1.0, 1.0, 1.0]
+        else:
+            layer_distance = random.uniform(0.3, 2.0)
+            angle_noises = [random.uniform(-math.pi, math.pi)] + [
+                random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)
+            ]
+            z_noises = [random.uniform(-0.1, 0.1) for _ in range(4)]
+            radii = [random.uniform(0.0, 1.0) for _ in range(4)]
+
+        # Append 1 new point for the top layer
+        z_toplayer += layer_distance
+        final_angle = angle_noises[0]
+        x = math.cos(final_angle) * radii[0]
+        y = math.sin(final_angle) * radii[0]
+        z = z_toplayer + z_noises[0]
+        positions.append([x, y, z])
+        # Append 3 new points for the bottom layer
+        z_bottomlayer -= layer_distance
+        for angle, angle_noise, radius, z_noise in zip(
+            base_angles, angle_noises[1:], radii[1:], z_noises[1:]
+        ):
+            final_angle = angle + angle_noise
+            x = math.cos(final_angle) * radius
+            y = math.sin(final_angle) * radius
+            z = z_bottomlayer + z_noise
+            positions.append([x, y, z])
+
     # Step 8: Create edge connections
     edges = []
     # Connect chiral center to lowest priority and substituent atoms (atom indices 1, 2, 3, 4)
@@ -141,7 +195,7 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10):
 
 
 # NOTE Simple chiral configurations have simple connections between layers
-def create_simple_chiral_instance(chirality_distance=1, species_range=10):
+def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=False):
     # Step 0: Assert necessary conditions
     assert (
         chirality_distance >= 1
@@ -191,14 +245,48 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10):
         chirality_tag = [0, 0, 1]
         chirality_str = "S"
 
+    # ------------------------------------
     # Step 7: Assign positions with layers
-    positions = [[0.0, 0.0, 1.0]]  # Chiral center at [0,0,1]
-    layer_distance = 0.5  # Distance between layers
-    for layer in range(1, chirality_distance + 1):
-        z = 1.0 - layer * layer_distance
-        for angle in [0, 2 * math.pi / 3, 4 * math.pi / 3]:
-            x = math.cos(angle)
-            y = math.sin(angle)
+    # ------------------------------------
+    base_angles = [0, 2 * math.pi / 3, 4 * math.pi / 3]
+    positions = []
+    z_layer = 1.0
+
+    # Step 7.1: Chiral Center position
+    if not noise:
+        # Deterministic first position at (0,0,1)
+        positions.append([0.0, 0.0, z_layer])
+    else:
+        # Randomize the first position on the xy-plane at z=1
+        center_angle = random.uniform(0, 2 * math.pi)
+        center_radius = random.uniform(0.0, 1.0)
+        center_x = math.cos(center_angle) * center_radius
+        center_y = math.sin(center_angle) * center_radius
+        positions.append([center_x, center_y, z_layer])
+
+    # Step 7.2: Following layer positions
+    for _ in range(chirality_distance):
+        if not noise:
+            layer_distance = 0.5  # deterministic
+            angle_noises = [0, 0, 0]
+            z_noises = [0, 0, 0]
+            radii = [1.0, 1.0, 1.0]
+        else:
+            layer_distance = random.uniform(0.3, 2.0)
+            angle_noises = [random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)]
+            z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
+            radii = [random.uniform(0.0, 1.0) for _ in range(3)]
+
+        # Move down the z-axis for this layer
+        z_layer -= layer_distance
+        # Append 3 new points for this layer
+        for angle, angle_noise, radius, z_noise in zip(
+            base_angles, angle_noises, radii, z_noises
+        ):
+            final_angle = angle + angle_noise
+            x = math.cos(final_angle) * radius
+            y = math.sin(final_angle) * radius
+            z = z_layer + z_noise
             positions.append([x, y, z])
 
     # Step 8: Create edge connections
@@ -308,14 +396,48 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10):
         chirality_tag = [0, 0, 1]
         chirality_str = "S"
 
+    # ------------------------------------
     # Step 7: Assign positions with layers
-    positions = [[0.0, 0.0, 1.0]]  # Chiral center at [0,0,1]
-    layer_distance = 0.5  # Distance between layers
-    for layer in range(1, chirality_distance + 1):
-        z = 1.0 - layer * layer_distance
-        for angle in [0, 2 * math.pi / 3, 4 * math.pi / 3]:
-            x = math.cos(angle)
-            y = math.sin(angle)
+    # ------------------------------------
+    base_angles = [0, 2 * math.pi / 3, 4 * math.pi / 3]
+    positions = []
+    z_layer = 1.0
+
+    # Step 7.1: Chiral Center position
+    if not noise:
+        # Deterministic first position at (0,0,1)
+        positions.append([0.0, 0.0, z_layer])
+    else:
+        # Randomize the first position on the xy-plane at z=1
+        center_angle = random.uniform(0, 2 * math.pi)
+        center_radius = random.uniform(0.0, 1.0)
+        center_x = math.cos(center_angle) * center_radius
+        center_y = math.sin(center_angle) * center_radius
+        positions.append([center_x, center_y, z_layer])
+
+    # Step 7.2: Following layer positions
+    for _ in range(chirality_distance):
+        if not noise:
+            layer_distance = 0.5  # deterministic
+            angle_noises = [0, 0, 0]
+            z_noises = [0, 0, 0]
+            radii = [1.0, 1.0, 1.0]
+        else:
+            layer_distance = random.uniform(0.3, 2.0)
+            angle_noises = [random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)]
+            z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
+            radii = [random.uniform(0.0, 1.0) for _ in range(3)]
+
+        # Move down the z-axis for this layer
+        z_layer -= layer_distance
+        # Append 3 new points for this layer
+        for angle, angle_noise, radius, z_noise in zip(
+            base_angles, angle_noises, radii, z_noises
+        ):
+            final_angle = angle + angle_noise
+            x = math.cos(final_angle) * radius
+            y = math.sin(final_angle) * radius
+            z = z_layer + z_noise
             positions.append([x, y, z])
 
     # Step 8: Create edge connections
