@@ -346,7 +346,7 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
 
 
 # NOTE Crossed chiral configurations have crossed connections between layers
-def create_crossed_chiral_instance(chirality_distance=1, species_range=10):
+def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise=False):
     # Step 0: Assert necessary conditions
     assert (
         chirality_distance >= 1
@@ -621,22 +621,28 @@ def create_pure_chiral_instance(points=4, species_range=10):
     return data
 
 
-def create_chiral_instance(type, chirality_distance, species_range, points):
+def create_chiral_instance(type, chirality_distance, species_range, points, noise):
     assert (
         species_range <= 118
     ), "Species range must be less than or equal to 118 (number of elements in the periodic table)"
 
     if type == "classic":
         return create_classic_chiral_instance(
-            chirality_distance=chirality_distance, species_range=species_range
+            chirality_distance=chirality_distance,
+            species_range=species_range,
+            noise=noise,
         )
     elif type == "simple":
         return create_simple_chiral_instance(
-            chirality_distance=chirality_distance, species_range=species_range
+            chirality_distance=chirality_distance,
+            species_range=species_range,
+            noise=noise,
         )
     elif type == "crossed":
         return create_crossed_chiral_instance(
-            chirality_distance=chirality_distance, species_range=species_range
+            chirality_distance=chirality_distance,
+            species_range=species_range,
+            noise=noise,
         )
     elif type == "pure":
         return create_pure_chiral_instance(points=points, species_range=species_range)
@@ -651,6 +657,7 @@ def create_dataset(
     species_range=10,
     points=4,
     save_path="dataset.pt",
+    noise=False,
 ):
     # Communication
     if type == "pure":
@@ -672,7 +679,9 @@ def create_dataset(
     data_list = []
     for _ in range(num_samples):
         # Generate chiral graph
-        data = create_chiral_instance(type, chirality_distance, species_range, points)
+        data = create_chiral_instance(
+            type, chirality_distance, species_range, points, noise
+        )
         # Append
         data_list.append(data)
     # Save
@@ -693,6 +702,7 @@ def main():
     species_range = args["species_range"]
     points = args["points"]
     save_path = args["save_path"]
+    noise = args["noise"]
 
     # Create
     print("Creating dataset...")
@@ -703,6 +713,7 @@ def main():
         species_range=species_range,
         points=points,
         save_path=save_path,
+        noise=noise,
     )
     print("Dataset created.")
 

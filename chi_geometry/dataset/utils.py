@@ -17,6 +17,7 @@ def load_dataset_json(file_path):
         "species_range": 8,
         "points": 4,
         "save_path": "dataset.pt",
+        "noise": False,
     }
 
     # Read
