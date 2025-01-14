@@ -13,7 +13,7 @@ from matplotlib.colors import Normalize
 from chi_geometry.dataset import load_dataset_json
 
 
-def plot_graph(dataset_path='dataset.pt', cmap='viridis'):
+def plot_graph(dataset_path="dataset.pt", cmap="viridis"):
     # Some Favorite Color Maps: 'viridis', 'Spectral'
     # Load dataset and select the first molecule/graph
     dataset = torch.load(dataset_path)
@@ -30,13 +30,13 @@ def plot_graph(dataset_path='dataset.pt', cmap='viridis'):
 
     # Plot the 3D structure with matplotlib
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_box_aspect([1,1,1])
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_box_aspect([1, 1, 1])
     # ax.set_axis_off()  # Hide axes
 
     # Plot nodes with colors corresponding to atomic numbers
     for pos, color in zip(positions, colors):
-        ax.scatter(*pos, color=color, s=100, edgecolors='k', alpha=0.9)
+        ax.scatter(*pos, color=color, s=100, edgecolors="k", alpha=0.9)
 
     # Draw edges between nodes based on edge_index
     edge_index = graph.edge_index
@@ -45,19 +45,21 @@ def plot_graph(dataset_path='dataset.pt', cmap='viridis'):
         for start, end in edge_index.T:
             start_pos = positions[start]
             end_pos = positions[end]
-            ax.plot(*zip(start_pos, end_pos), color='gray', alpha=0.7)
+            ax.plot(*zip(start_pos, end_pos), color="gray", alpha=0.7)
 
     # Set plot parameters
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    plt.title(f"Graph Visualization | Chiral Center has Label: {graph.chirality_str[0][0]}")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    plt.title(
+        f"Graph Visualization | Chiral Center has Label: {graph.chirality_str[0][0]}"
+    )
 
     # Add color bar for atomic numbers
     sm = cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = plt.colorbar(sm, ax=ax, pad=0.1, shrink=0.7)
-    cbar.set_label('Node Species')
+    cbar.set_label("Node Species")
 
     # Show the plot (interactive)
     plt.show()
@@ -66,12 +68,12 @@ def plot_graph(dataset_path='dataset.pt', cmap='viridis'):
 def main():
     # Read Config
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, 'config.json')
+    config_path = os.path.join(script_dir, "config.json")
     args = load_dataset_json(config_path)
 
     # Plot
-    plot_graph(dataset_path=args['save_path'], cmap=args['cmap'])
+    plot_graph(dataset_path=args["save_path"], cmap=args["cmap"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

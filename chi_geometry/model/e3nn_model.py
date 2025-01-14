@@ -86,9 +86,13 @@ class Convolution(torch.nn.Module):
         self.irreps_out = o3.Irreps(irreps_out)
         self.num_neighbors = num_neighbors
 
-        self.sc = FullyConnectedTensorProduct(self.irreps_in, self.irreps_node_attr, self.irreps_out)
+        self.sc = FullyConnectedTensorProduct(
+            self.irreps_in, self.irreps_node_attr, self.irreps_out
+        )
 
-        self.lin1 = FullyConnectedTensorProduct(self.irreps_in, self.irreps_node_attr, self.irreps_in)
+        self.lin1 = FullyConnectedTensorProduct(
+            self.irreps_in, self.irreps_node_attr, self.irreps_in
+        )
 
         irreps_mid = []
         instructions = []
@@ -102,7 +106,10 @@ class Convolution(torch.nn.Module):
         irreps_mid = o3.Irreps(irreps_mid)
         irreps_mid, p, _ = irreps_mid.sort()
 
-        instructions = [(i_1, i_2, p[i_out], mode, train) for i_1, i_2, i_out, mode, train in instructions]
+        instructions = [
+            (i_1, i_2, p[i_out], mode, train)
+            for i_1, i_2, i_out, mode, train in instructions
+        ]
 
         tp = TensorProduct(
             self.irreps_in,
@@ -113,13 +120,18 @@ class Convolution(torch.nn.Module):
             shared_weights=False,
         )
         self.fc = FullyConnectedNet(
-            [number_of_basis] + radial_layers * [radial_neurons] + [tp.weight_numel], torch.nn.functional.silu
+            [number_of_basis] + radial_layers * [radial_neurons] + [tp.weight_numel],
+            torch.nn.functional.silu,
         )
         self.tp = tp
 
-        self.lin2 = FullyConnectedTensorProduct(irreps_mid, self.irreps_node_attr, self.irreps_out)
+        self.lin2 = FullyConnectedTensorProduct(
+            irreps_mid, self.irreps_node_attr, self.irreps_out
+        )
 
-    def forward(self, node_input, node_attr, edge_src, edge_dst, edge_attr, edge_length_embedded) -> torch.Tensor:
+    def forward(
+        self, node_input, node_attr, edge_src, edge_dst, edge_attr, edge_length_embedded
+    ) -> torch.Tensor:
         weight = self.fc(edge_length_embedded)
 
         x = node_input
@@ -128,7 +140,9 @@ class Convolution(torch.nn.Module):
         x = self.lin1(x, node_attr)
 
         edge_features = self.tp(x[edge_src], edge_attr, weight)
-        x = scatter(edge_features, edge_dst, dim_size=x.shape[0]).div(self.num_neighbors**0.5)
+        x = scatter(edge_features, edge_dst, dim_size=x.shape[0]).div(
+            self.num_neighbors ** 0.5
+        )
 
         x = self.lin2(x, node_attr)
 
@@ -248,7 +262,11 @@ class Network(torch.nn.Module):
         self.irreps_in = o3.Irreps(irreps_in) if irreps_in is not None else None
         self.irreps_hidden = o3.Irreps(irreps_hidden)
         self.irreps_out = o3.Irreps(irreps_out)
-        self.irreps_node_attr = o3.Irreps(irreps_node_attr) if irreps_node_attr is not None else o3.Irreps("0e")
+        self.irreps_node_attr = (
+            o3.Irreps(irreps_node_attr)
+            if irreps_node_attr is not None
+            else o3.Irreps("0e")
+        )
         self.irreps_edge_attr = o3.Irreps(irreps_edge_attr)
 
         self.input_has_node_in = irreps_in is not None
@@ -278,7 +296,11 @@ class Network(torch.nn.Module):
                 ]
             )
             irreps_gated = o3.Irreps(
-                [(mul, ir) for mul, ir in self.irreps_hidden if ir.l > 0 and tp_path_exists(irreps, self.irreps_edge_attr, ir)]
+                [
+                    (mul, ir)
+                    for mul, ir in self.irreps_hidden
+                    if ir.l > 0 and tp_path_exists(irreps, self.irreps_edge_attr, ir)
+                ]
             )
             ir = "0e" if tp_path_exists(irreps, self.irreps_edge_attr, "0e") else "0o"
             irreps_gates = o3.Irreps([(mul, ir) for mul, _ in irreps_gated])
@@ -318,7 +340,10 @@ class Network(torch.nn.Module):
 
         self.OutModule = torch.nn.ModuleList()
         for _ in range(self.num_heads):
-            self.out_embed = torch.nn.Linear(self.irreps_out.count((0, 1)) + self.irreps_out.count((0, -1)), self.num_classes)
+            self.out_embed = torch.nn.Linear(
+                self.irreps_out.count((0, 1)) + self.irreps_out.count((0, -1)),
+                self.num_classes,
+            )
             self.OutModule.append(self.out_embed)
 
     def forward(self, data: Dict[str, torch.Tensor]) -> torch.Tensor:
@@ -344,11 +369,18 @@ class Network(torch.nn.Module):
         edge_src = edge_index[0]
         edge_dst = edge_index[1]
         edge_vec = data["pos"][edge_src] - data["pos"][edge_dst]
-        edge_sh = o3.spherical_harmonics(self.irreps_edge_attr, edge_vec, True, normalization="component")
+        edge_sh = o3.spherical_harmonics(
+            self.irreps_edge_attr, edge_vec, True, normalization="component"
+        )
         edge_length = edge_vec.norm(dim=1)
         edge_length_embedded = soft_one_hot_linspace(
-            x=edge_length, start=0.0, end=self.max_radius, number=self.number_of_basis, basis="gaussian", cutoff=False
-        ).mul(self.number_of_basis**0.5)
+            x=edge_length,
+            start=0.0,
+            end=self.max_radius,
+            number=self.number_of_basis,
+            basis="gaussian",
+            cutoff=False,
+        ).mul(self.number_of_basis ** 0.5)
         edge_attr = smooth_cutoff(edge_length / self.max_radius)[:, None] * edge_sh
 
         if self.input_has_node_in and "atomic_numbers_one_hot" in data:
