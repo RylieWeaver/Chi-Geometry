@@ -11,13 +11,13 @@ from chi_geometry.model import process_batch
 # Training Function
 def train(model, loader, optimizer, criterion, device):
     model.train()
-    num_heads = len(model.OutModule)
     total_loss = 0
     for data in tqdm(loader, desc="Training", leave=False):
         data = data.to(device)
         optimizer.zero_grad()
         data = process_batch(data)
         outputs = model(data)  # Shape: [num_heads, num_nodes, num_classes]
+        num_heads = outputs.size(0)
 
         # Initialize loss
         loss = 0
