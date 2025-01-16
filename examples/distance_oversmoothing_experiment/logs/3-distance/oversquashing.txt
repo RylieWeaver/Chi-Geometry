@@ -1,0 +1,7 @@
+=== Oversquashing Analysis (distance=3, max_graphs=1000) ===
+1000 graphs processed.
+
+Distance 0 => raw avg: 0.0000, normalized: 0.0084
+Distance 1 => raw avg: 0.0000, normalized: 0.8539
+Distance 2 => raw avg: 0.0000, normalized: 0.0865
+Distance 3 => raw avg: 0.0000, normalized: 0.0512

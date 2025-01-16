@@ -1,0 +1,4 @@
+===== Final Stats (Best Model) =====
+Train Loss: 0.7967, Train Acc: [Class 0: 0.75, Class 1: 0.67, Class 2: 0.21]
+Val Loss:   0.8110,   Val Acc:   [Class 0: 0.76, Class 1: 0.64, Class 2: 0.21]
+Test Loss:  0.8088,  Test Acc:  [Class 0: 0.76, Class 1: 0.65, Class 2: 0.18]

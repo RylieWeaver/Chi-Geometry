@@ -1,0 +1,18 @@
+===== Oversmoothing Analysis (per-graph averaging) =====
+Distance: 6
+
+Train:
+  Mean Variance: 0.0218
+  Avg Cosine Sim: 0.0577
+  Sqrt Dirichlet Energy: inf
+
+Val:
+  Mean Variance: 0.0211
+  Avg Cosine Sim: 0.0559
+  Sqrt Dirichlet Energy: inf
+
+Test:
+  Mean Variance: 0.0220
+  Avg Cosine Sim: 0.0577
+  Sqrt Dirichlet Energy: inf
+

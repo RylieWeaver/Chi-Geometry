@@ -1,0 +1,4 @@
+===== Final Stats (Best Model) =====
+Train Loss: nan, Train Acc: [Class 0: 1.00, Class 1: 0.00, Class 2: 0.00]
+Val Loss:   nan,   Val Acc:   [Class 0: 1.00, Class 1: 0.00, Class 2: 0.00]
+Test Loss:  nan,  Test Acc:  [Class 0: 1.00, Class 1: 0.00, Class 2: 0.00]
