@@ -4,6 +4,7 @@ import functools
 import torch
 import torch.nn.functional as F
 from torch_geometric.loader import DataLoader
+from collections import deque
 
 # E3NN
 from e3nn import o3
@@ -29,37 +30,56 @@ def store_activations(activations_dict, module, input, output):
 ###############################################################################
 # 2) COMPUTING OVERSMOOTHING METRICS FUNCTIONS
 ###############################################################################
-def compute_oversmoothing_metrics_graph(embs):
+def compute_dirichlet_energy(embs: torch.Tensor, edge_index: torch.Tensor) -> float:
     """
-    'embs': Tensor [N, D] of node embeddings for a single graph.
+    embs:       shape [N, D], node embeddings
+    edge_index: shape [2, E], edges = (row[], col[])
 
-    We do:
-      1) L2 normalize each embedding => shape [N, D]
-      2) Compute average dimension-wise variance
-      3) Use matrix multiplication to get pairwise cosine similarities,
-         exclude the diagonal, and average over the upper triangle
+    Returns the Dirichlet energy:
+        sqrt( (1/v) * sum_{(i,j) in edges} ||embs[i] - embs[j]||^2 )
+    """
+    i, j = edge_index  # row & col of edges
+    # Differences for each edge => shape [2E, D] (double edges in edge_index)
+    diffs = embs[i] - embs[j]
+    # L2 squared => shape [E]
+    sq_dists = (diffs**2).sum(dim=-1) / 2  # Divide by 2 to avoid double counting
+
+    v = embs.size(0)  # number of nodes
+    sum_sq = sq_dists.sum()
+    dirichlet_value = (sum_sq / v).sqrt().item()
+    return dirichlet_value
+
+
+def compute_oversmoothing_metrics_graph(embs, edge_index):
+    """
+    Now includes Dirichlet energy as recommended.
+    Also keeps your original mean_variance & avg_cos_sim if you want them.
     """
     N = embs.size(0)
+    # If fewer than 2 nodes => trivially zero or undefined
     if N <= 1:
-        # If there's only one (or zero) nodes, no pairs to compare
-        return {"mean_variance": 0.0, "avg_cos_sim": 0.0}
+        return {"mean_variance": 0.0, "avg_cos_sim": 0.0, "dirichlet": 0.0}
 
-    # 1) L2 normalize
+    # 1) L2 normalize (your original step)
     embs_normed = F.normalize(embs, p=2, dim=1)
 
     # 2) Dimension-wise variance => average => scalar
     var_per_dim = embs_normed.var(dim=0, unbiased=False)
     mean_var = var_per_dim.mean().item()
 
-    # 3) Pairwise cosine similarity via matrix multiply
-    #    embs_normed @ embs_normed^T => shape [N, N]
+    # 3) Pairwise cosine similarity
     cos_matrix = embs_normed @ embs_normed.t()
-
-    # exclude diagonal => number of unique pairs => upper triangle
     mask = torch.ones(N, N, device=cos_matrix.device).triu(diagonal=1).bool()
-    avg_cos_sim = cos_matrix[mask].mean().item()  # average of upper-tri off-diagonal
+    avg_cos_sim = cos_matrix[mask].mean().item()
 
-    return {"mean_variance": mean_var, "avg_cos_sim": avg_cos_sim}
+    # 4) Dirichlet energy
+    dirichlet_val = compute_dirichlet_energy(embs, edge_index)
+
+    return {
+        "mean_variance": mean_var,
+        "avg_cos_sim": avg_cos_sim,
+        "dirichlet": dirichlet_val,
+    }
 
 
 def compute_oversmoothing_metrics_dataset(
@@ -67,6 +87,7 @@ def compute_oversmoothing_metrics_dataset(
 ):
     total_var = 0.0
     total_cos = 0.0
+    total_dirichlet = 0.0
     graph_count = 0
 
     with torch.no_grad():
@@ -81,17 +102,22 @@ def compute_oversmoothing_metrics_dataset(
             node_embs = activations["final_conv_output"].cpu()
 
             # Compute oversmoothing metrics for this single graph
-            metrics = compute_oversmoothing_metrics_graph(node_embs)
+            metrics = compute_oversmoothing_metrics_graph(
+                node_embs, single_graph_data.edge_index  # needed for Dirichlet
+            )
             total_var += metrics["mean_variance"]
             total_cos += metrics["avg_cos_sim"]
+            total_dirichlet += metrics["dirichlet"]
             graph_count += 1
 
     if graph_count == 0:
-        return {"mean_variance": 0.0, "avg_cos_sim": 0.0}
+        return {"mean_variance": 0.0, "avg_cos_sim": 0.0, "dirichlet": 0.0}
 
-    avg_var = total_var / graph_count
-    avg_cos = total_cos / graph_count
-    return {"mean_variance": avg_var, "avg_cos_sim": avg_cos}
+    return {
+        "mean_variance": total_var / graph_count,
+        "avg_cos_sim": total_cos / graph_count,
+        "dirichlet": total_dirichlet / graph_count,
+    }
 
 
 ###############################################################################
@@ -209,15 +235,18 @@ def analyze_oversmoothing(distance):
 
         f.write("Train:\n")
         f.write(f"  Mean Variance: {train_metrics['mean_variance']:.4f}\n")
-        f.write(f"  Avg Cosine Sim: {train_metrics['avg_cos_sim']:.4f}\n\n")
+        f.write(f"  Avg Cosine Sim: {train_metrics['avg_cos_sim']:.4f}\n")
+        f.write(f"  Sqrt Dirichlet Energy: {train_metrics['dirichlet']:.4f}\n\n")
 
         f.write("Val:\n")
         f.write(f"  Mean Variance: {val_metrics['mean_variance']:.4f}\n")
-        f.write(f"  Avg Cosine Sim: {val_metrics['avg_cos_sim']:.4f}\n\n")
+        f.write(f"  Avg Cosine Sim: {val_metrics['avg_cos_sim']:.4f}\n")
+        f.write(f"  Sqrt Dirichlet Energy: {val_metrics['dirichlet']:.4f}\n\n")
 
         f.write("Test:\n")
         f.write(f"  Mean Variance: {test_metrics['mean_variance']:.4f}\n")
-        f.write(f"  Avg Cosine Sim: {test_metrics['avg_cos_sim']:.4f}\n\n")
+        f.write(f"  Avg Cosine Sim: {test_metrics['avg_cos_sim']:.4f}\n")
+        f.write(f"  Sqrt Dirichlet Energy: {test_metrics['dirichlet']:.4f}\n\n")
 
     print(f"Oversmoothing metrics written to {smoothness_path}")
 
@@ -226,6 +255,22 @@ def analyze_oversmoothing(distance):
 # 6) Main
 ###############################################################################
 if __name__ == "__main__":
-    distances = [3]
+    distances = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     for dist in distances:
         analyze_oversmoothing(dist)
+
+
+###############################################################################
+# 7) Notes
+###############################################################################
+# Epochs to converge to perfect accuracy on train/val/test by distance:
+#  - distance=1:  32 epochs
+#  - distance=2:  77 epochs
+#  - distance=3:  261 epochs
+#  - distance=4:  343 epochs
+#  - distance=5:  N/A  (carried out 492 epochs)
+#  - distance=6:  N/A  (early stopped at 76 epochs)
+#  - distance=7:  N/A  (early stopped at 76 epochs)
+#  - distance=8:  N/A  (early stopped at 76 epochs)
+#  - distance=9:  N/A  (early stopped at 75 epochs) (nans in loss)
+# 500 epochs and 75 early stopping
