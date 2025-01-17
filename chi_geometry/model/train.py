@@ -40,7 +40,6 @@ def train(model, loader, optimizer, criterion, device):
 def test(model, loader, criterion, device, num_classes):
     model.eval()
     total_loss = 0
-    num_heads = len(model.OutModule)
     correct_per_class = torch.zeros(num_classes, device=device)
     total_per_class = torch.zeros(num_classes, device=device)
 
@@ -49,6 +48,7 @@ def test(model, loader, criterion, device, num_classes):
             data = data.to(device)
             data = process_batch(data)
             outputs = model(data)  # Shape: [num_heads, num_nodes, num_classes]
+            num_heads = outputs.size(0)
 
             # Initialize loss
             loss = 0

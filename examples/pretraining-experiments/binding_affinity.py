@@ -93,7 +93,9 @@ def process_and_save(split):
         data_df = pickle.load(f)
 
     data_list = []
-    data_df = data_df.sample(frac=0.1)  # Shuffle and subset the data
+    data_df = data_df.sample(frac=1.0).reset_index(
+        drop=True
+    )  # Shuffle and subset the data
     # data_df = data_df[:3000]
     for idx, row in tqdm(
         data_df.iterrows(), total=len(data_df), desc=f"Processing {split} dataset"

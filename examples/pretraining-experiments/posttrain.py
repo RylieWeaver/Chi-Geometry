@@ -30,9 +30,9 @@ def train_model(pretrained_dir=None, dataset_size=None):
     val_dataset = torch.load(os.path.join(datadir, "val.pt"))
     test_dataset = torch.load(os.path.join(datadir, "test.pt"))
     if dataset_size is not None:
-        train_dataset = train_dataset[: int(0.8 * dataset_size)]
-        val_dataset = val_dataset[: int(0.1 * dataset_size)]
-        test_dataset = test_dataset[: int(0.1 * dataset_size)]
+        train_dataset = train_dataset[:dataset_size]
+        val_dataset = val_dataset[: int(0.125 * dataset_size)]
+        test_dataset = test_dataset
     else:
         dataset_size = len(train_dataset) + len(val_dataset) + len(test_dataset)
     print(
@@ -133,7 +133,7 @@ def train_model(pretrained_dir=None, dataset_size=None):
     )
 
     # Early stopping parameters
-    patience = 50
+    patience = 75
     best_val_loss = float("inf")
     epochs_no_improve = 0
 
@@ -288,13 +288,13 @@ class Wrapped_Network(torch.nn.Module):
 
 
 def main():
-    pretrained_dir = "./logs/composite_2025-01-13_23-24-31/"
-    # dataset_sizes = [100, 1000]
-    # for dataset_size in dataset_sizes:
-    #     # train_model(None, dataset_size)
-    #     train_model(pretrained_dir, dataset_size)
-    train_model(None, 10000)
-    train_model(pretrained_dir, 10000)
+    # pretrained_dir = "./logs/composite_2025-01-13_23-24-31/"
+    pretrained_dir = "./logs/composite_2025-01-16-17-11-04/"
+    dataset_sizes = [100, 316, 1000, 3162, 10000]
+    for dataset_size in dataset_sizes:
+        for i in range(5):
+            train_model(None, dataset_size)
+            train_model(pretrained_dir, dataset_size)
 
 
 if __name__ == "__main__":

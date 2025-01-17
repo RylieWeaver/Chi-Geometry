@@ -135,13 +135,13 @@ def pretrain_model():
         optimizer,
         mode="min",
         factor=0.5,
-        patience=10,
+        patience=15,
         verbose=True,
         min_lr=model_args["lr"] / 1e3,
     )
 
     # Early stopping parameters
-    patience = 25
+    patience = 75
     best_val_loss = float("inf")
     epochs_no_improve = 0
 
