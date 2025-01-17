@@ -41,6 +41,7 @@ def train(model, loader, optimizer, criterion, device):
 # Testing Function
 def test(model, loader, criterion, device, num_classes):
     model.eval()
+    total_loss = 0
     correct_per_class = torch.zeros(num_classes, device=device)
     total_per_class = torch.zeros(num_classes, device=device)
 

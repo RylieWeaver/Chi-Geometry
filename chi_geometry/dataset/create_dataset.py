@@ -685,6 +685,7 @@ def create_dataset(
         # Append
         data_list.append(data)
     # Save
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     torch.save(data_list, save_path)
     print(f"Dataset saved as {save_path}")
 
