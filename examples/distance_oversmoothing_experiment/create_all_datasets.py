@@ -13,3 +13,7 @@ def main():
     # Create datasets
     dataset_config_path = os.path.join(script_dir, "dataset_config.json")
     create_all_datasets(distances, dataset_config_path)
+
+
+if __name__ == "__main__":
+    main()
