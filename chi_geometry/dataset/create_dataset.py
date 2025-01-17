@@ -673,6 +673,7 @@ def create_dataset(
         print(f"Type: {type}")
         print(f"Chirality distance: {chirality_distance}")
         print(f"Species range: {species_range}")
+        print(f"Noise: {noise}")
         print(f"Save path: {save_path}")
 
     # Create
@@ -685,6 +686,7 @@ def create_dataset(
         # Append
         data_list.append(data)
     # Save
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     torch.save(data_list, save_path)
     print(f"Dataset saved as {save_path}")
 

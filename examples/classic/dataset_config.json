@@ -3,5 +3,6 @@
     "type": "classic",
     "chirality_distance": 1,
     "species_range": 10,
-    "save_path": "dataset.pt"
+    "save_path": "dataset.pt",
+    "noise": false
 }
