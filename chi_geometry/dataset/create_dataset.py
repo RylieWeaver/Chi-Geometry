@@ -673,6 +673,7 @@ def create_dataset(
         print(f"Type: {type}")
         print(f"Chirality distance: {chirality_distance}")
         print(f"Species range: {species_range}")
+        print(f"Noise: {noise}")
         print(f"Save path: {save_path}")
 
     # Create

@@ -10,7 +10,6 @@ from torch_geometric.loader import DataLoader
 from e3nn import o3
 
 # Custom imports
-from chi_geometry.dataset import load_dataset_json
 from chi_geometry.model import Network, load_model_json, process_batch
 
 
@@ -219,7 +218,7 @@ def main():
         print(f"Dataset contains {len(dataset)} graphs.")
 
         # Model
-        modelname = f"local_e3nn-"  # NOTE: This needs to be hardcoded in to choose a certain model with datetime stamp
+        modelname = f"local_e3nn"
         if noise:
             log_dir = f"logs/noise-{dist}-distance-{modelname}"
         else:
@@ -244,13 +243,16 @@ def main():
             num_classes=model_args["num_classes"],
             num_heads=model_args["num_heads"],
         ).to(device)
-        model.load_state_dict(
-            torch.load(f"{log_dir}/best_model.pt"), map_location=device
-        )
+        model.load_state_dict(torch.load(f"{log_dir}/best_model.pt"))
+        model.eval()
         print(f"Training model for distance {dist}...")
         oversquashing_analysis(model, dataset, dist, log_dir, device=device)
 
     print("Experiment complete.")
+
+
+if __name__ == "__main__":
+    main()
 
 
 ###############################################################################

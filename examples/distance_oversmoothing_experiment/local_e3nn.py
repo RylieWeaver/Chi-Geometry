@@ -43,9 +43,7 @@ def main():
         print(f"Dataset contains {len(dataset)} graphs.")
 
         # Model
-        modelname = (
-            f"local_e3nn-{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
-        )
+        modelname = f"local_e3nn"
         if noise:
             log_dir = f"logs/noise-{dist}-distance-{modelname}"
         else:
@@ -71,10 +69,15 @@ def main():
             num_heads=model_args["num_heads"],
         ).to(device)
         print(f"Training model for distance {dist}...")
-        train_val_test_model(model, model_config_path, dataset, dist, log_dir)
+        train_val_test_model(model, model_args, dataset, dist, log_dir)
 
     print("Experiment complete.")
 
 
 if __name__ == "__main__":
     main()
+
+
+# To-Do in main:
+# 1. Create dataset directories
+# 2. num_heads in train/test

@@ -231,7 +231,7 @@ class CustomNetwork(torch.nn.Module):
         )
         self.irreps_edge_attr_created = o3.Irreps(irreps_edge_attr)
         self.irreps_edge_attr_passed = o3.Irreps(
-            "1x0e"
+            "3x0e"
         )  # One scalar indicating the hop distance
         self.irreps_edge_attr = (
             o3.Irreps(self.irreps_edge_attr_passed) + self.irreps_edge_attr_created

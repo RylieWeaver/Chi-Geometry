@@ -42,9 +42,7 @@ def main():
         print(f"Dataset contains {len(dataset)} graphs.")
 
         # Model
-        modelname = (
-            f"se(3)_transformer-{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
-        )
+        modelname = f"se(3)_transformer"
         if noise:
             log_dir = f"logs/noise-{dist}-distance-{modelname}"
         else:
@@ -59,7 +57,7 @@ def main():
             num_classes=model_args["num_classes"],
         ).to(device)
         print(f"Training model for distance {dist}...")
-        train_val_test_model(model, model_config_path, dataset, dist, log_dir)
+        train_val_test_model(model, model_args, dataset, dist, log_dir)
 
     print("Experiment complete.")
 
