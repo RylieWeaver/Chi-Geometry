@@ -110,6 +110,7 @@ def main():
             # Train a model from scratch
             print(f"Training model from scratch...")
             model, model_args, modelname = load_model_pretrained(None)
+            log_dir = f"logs/binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition}"
             train_val_test_model_no_accuracies(
                 model,
                 model_args,
@@ -117,11 +118,11 @@ def main():
                 val,
                 test,
                 criterion,
-                f"logs/binding_affinity-{modelname}-samples-{dataset_size}-repetition-{repetition}",
+                log_dir,
             )
             # Train a model from pretrained
             print(f"Training model from pretrained with dataset size {dataset_size}...")
-            model, model_args, modelname = load_model_pretrained(f"logs/{modelname}")
+            model, model_args, modelname = load_model_pretrained(pretrained_dir)
             train_val_test_model_no_accuracies(
                 model,
                 model_args,
@@ -129,7 +130,7 @@ def main():
                 val,
                 test,
                 criterion,
-                f"logs/binding_affinity-{modelname}-samples-{dataset_size}-repetition-{repetition}",
+                log_dir,
             )
 
     print("Experiment complete.")
