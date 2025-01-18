@@ -110,7 +110,7 @@ def main():
             # Train a model from scratch
             print(f"Training model from scratch...")
             model, model_args, modelname = load_model_pretrained(None)
-            log_dir = f"logs/binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition}"
+            log_dir = f"logs/binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition+1}"
             train_val_test_model_no_accuracies(
                 model,
                 model_args,
