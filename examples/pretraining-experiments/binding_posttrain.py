@@ -22,7 +22,7 @@ from experiment_utils.model import Wrapped_Network
 from experiment_utils.train_val_test import train_val_test_model_no_accuracies
 
 
-def load_model_pretrained(device, pretrained_dir=None):
+def load_model_pretrained(pretrained_dir=None):
     # Choose model args
     script_dir = os.path.dirname(os.path.abspath(__file__))
     if pretrained_dir is not None:
