@@ -2,6 +2,7 @@
 import os
 import json
 import datetime
+import random
 
 # Torch
 import torch
@@ -13,7 +14,7 @@ from e3nn import o3
 
 # Custom
 from chi_geometry.model import Network, load_model_json
-from experiment_utils import train_val_test_model_accuracies
+from experiment_utils.train_val_test import train_val_test_model_accuracies
 
 
 def main():

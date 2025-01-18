@@ -106,18 +106,30 @@ def main():
         )
 
         # Train models repeatedly
-        for i in range(5):
+        for repetition in range(5):
             # Train a model from scratch
             print(f"Training model from scratch...")
             model, model_args, modelname = load_model_pretrained(None)
             train_val_test_model_no_accuracies(
-                model, model_args, train, val, test, criterion, f"logs/{modelname}"
+                model,
+                model_args,
+                train,
+                val,
+                test,
+                criterion,
+                f"logs/binding_affinity-{modelname}-samples-{dataset_size}-repetition-{repetition}",
             )
             # Train a model from pretrained
-            print(f"Training model from pretrained...")
+            print(f"Training model from pretrained with dataset size {dataset_size}...")
             model, model_args, modelname = load_model_pretrained(f"logs/{modelname}")
             train_val_test_model_no_accuracies(
-                model, model_args, train, val, test, criterion, f"logs/{modelname}"
+                model,
+                model_args,
+                train,
+                val,
+                test,
+                criterion,
+                f"logs/binding_affinity-{modelname}-samples-{dataset_size}-repetition-{repetition}",
             )
 
     print("Experiment complete.")
