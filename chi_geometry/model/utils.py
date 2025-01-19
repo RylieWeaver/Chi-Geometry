@@ -20,7 +20,7 @@ def load_model_json(file_path):
         "irreps_node_attr": "1x0e",
         "irreps_edge_attr": "1x0e + 1x1o",
         "layers": 4,
-        "max_radius": 2.0,
+        "max_radius": 5.0,
         "number_of_basis": 5,
         "radial_layers": 2,
         "radial_neurons": 50,
