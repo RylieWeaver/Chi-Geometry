@@ -58,30 +58,16 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
     # Step 6: Arrange atoms
     if clockwise:
         # Sort quadruplet atoms in ascending order (smallest to largest)
-        triplet_atoms.sort(reverse=True)
+        triplet_atoms.sort()
         chirality_value = 1
         chirality_tag = [0, 1, 0]
         chirality_str = "R"
     else:
         # Sort quadruplet atoms in descending order (largest to smallest)
-        triplet_atoms.sort()
+        triplet_atoms.sort(reverse=True)
         chirality_value = 2
         chirality_tag = [0, 0, 1]
         chirality_str = "S"
-
-    # Step 7: Assign positions with layers
-    positions = [[0.0, 0.0, 1.0]]  # Chiral center at [0, 0, 1]
-    layer_distance = 0.5  # Distance between layers
-
-    for layer in range(1, chirality_distance + 1):
-        # Lowest priority substituent (directly above chiral center)
-        positions.append([0.0, 0.0, 1.0 + layer * layer_distance])
-        # Triplet atoms (other three substituents) below the chiral center
-        for angle in [0, 2 * math.pi / 3, 4 * math.pi / 3]:
-            x = math.cos(angle)
-            y = math.sin(angle)
-            z = 1.0 - layer * layer_distance
-            positions.append([x, y, z])
 
     # ------------------------------------
     # Step 7: Assign positions with layers
@@ -93,16 +79,7 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
     z_bottomlayer = 1.0
 
     # Step 7.1: Chiral Center position
-    if not noise:
-        # Deterministic first position at (0,0,1)
-        positions.append([0.0, 0.0, z_layer])
-    else:
-        # Randomize the first position on the xy-plane at z=1
-        center_angle = random.uniform(0, 2 * math.pi)
-        center_radius = random.uniform(0.0, 1.0)
-        center_x = math.cos(center_angle) * center_radius
-        center_y = math.sin(center_angle) * center_radius
-        positions.append([center_x, center_y, z_layer])
+    positions.append([0.0, 0.0, z_layer])
 
     # Step 7.2: Following layer positions
     for _ in range(chirality_distance):
@@ -113,23 +90,18 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
             radii = [0.0, 1.0, 1.0, 1.0]
         else:
             layer_distance = random.uniform(0.3, 2.0)
-            angle_noises = [random.uniform(-math.pi, math.pi)] + [
-                random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)
-            ]
+            angle_noises = [random.uniform(-math.pi / 4, math.pi / 4) for _ in range(3)]
             z_noises = [random.uniform(-0.1, 0.1) for _ in range(4)]
-            radii = [random.uniform(0.0, 1.0) for _ in range(4)]
+            radii = [random.uniform(0.1, 1.0) for _ in range(3)]
 
         # Append 1 new point for the top layer
         z_toplayer += layer_distance
-        final_angle = angle_noises[0]
-        x = math.cos(final_angle) * radii[0]
-        y = math.sin(final_angle) * radii[0]
         z = z_toplayer + z_noises[0]
-        positions.append([x, y, z])
+        positions.append([0, 0, z])
         # Append 3 new points for the bottom layer
         z_bottomlayer -= layer_distance
         for angle, angle_noise, radius, z_noise in zip(
-            base_angles, angle_noises[1:], radii[1:], z_noises[1:]
+            base_angles, angle_noises, radii, z_noises[1:]
         ):
             final_angle = angle + angle_noise
             x = math.cos(final_angle) * radius
@@ -234,13 +206,13 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
     # Step 6: Arrange atoms
     if clockwise:
         # Sort other atoms in ascending order (smallest to largest)
-        triplet_atoms.sort(reverse=True)
+        triplet_atoms.sort()
         chirality_value = 1
         chirality_tag = [0, 1, 0]
         chirality_str = "R"
     else:
         # Sort other atoms in descending order (largest to smallest)
-        triplet_atoms.sort()
+        triplet_atoms.sort(reverse=True)
         chirality_value = 2
         chirality_tag = [0, 0, 1]
         chirality_str = "S"
@@ -253,16 +225,7 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
     z_layer = 1.0
 
     # Step 7.1: Chiral Center position
-    if not noise:
-        # Deterministic first position at (0,0,1)
-        positions.append([0.0, 0.0, z_layer])
-    else:
-        # Randomize the first position on the xy-plane at z=1
-        center_angle = random.uniform(0, 2 * math.pi)
-        center_radius = random.uniform(0.0, 1.0)
-        center_x = math.cos(center_angle) * center_radius
-        center_y = math.sin(center_angle) * center_radius
-        positions.append([center_x, center_y, z_layer])
+    positions.append([0.0, 0.0, z_layer])
 
     # Step 7.2: Following layer positions
     for _ in range(chirality_distance):
@@ -273,9 +236,9 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
             radii = [1.0, 1.0, 1.0]
         else:
             layer_distance = random.uniform(0.3, 2.0)
-            angle_noises = [random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)]
+            angle_noises = [random.uniform(-math.pi / 4, math.pi / 4) for _ in range(3)]
             z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
-            radii = [random.uniform(0.0, 1.0) for _ in range(3)]
+            radii = [random.uniform(0.1, 1.0) for _ in range(3)]
 
         # Move down the z-axis for this layer
         z_layer -= layer_distance
@@ -385,13 +348,13 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
     # Step 6: Arrange atoms
     if clockwise:
         # Sort other atoms in ascending order (smallest to largest)
-        triplet_atoms.sort(reverse=True)
+        triplet_atoms.sort()
         chirality_value = 1
         chirality_tag = [0, 1, 0]
         chirality_str = "R"
     else:
         # Sort other atoms in descending order (largest to smallest)
-        triplet_atoms.sort()
+        triplet_atoms.sort(reverse=True)
         chirality_value = 2
         chirality_tag = [0, 0, 1]
         chirality_str = "S"
@@ -404,16 +367,7 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
     z_layer = 1.0
 
     # Step 7.1: Chiral Center position
-    if not noise:
-        # Deterministic first position at (0,0,1)
-        positions.append([0.0, 0.0, z_layer])
-    else:
-        # Randomize the first position on the xy-plane at z=1
-        center_angle = random.uniform(0, 2 * math.pi)
-        center_radius = random.uniform(0.0, 1.0)
-        center_x = math.cos(center_angle) * center_radius
-        center_y = math.sin(center_angle) * center_radius
-        positions.append([center_x, center_y, z_layer])
+    positions.append([0.0, 0.0, z_layer])
 
     # Step 7.2: Following layer positions
     for _ in range(chirality_distance):
@@ -424,9 +378,9 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
             radii = [1.0, 1.0, 1.0]
         else:
             layer_distance = random.uniform(0.3, 2.0)
-            angle_noises = [random.uniform(-math.pi / 3, math.pi / 3) for _ in range(3)]
+            angle_noises = [random.uniform(-math.pi / 4, math.pi / 4) for _ in range(3)]
             z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
-            radii = [random.uniform(0.0, 1.0) for _ in range(3)]
+            radii = [random.uniform(0.1, 1.0) for _ in range(3)]
 
         # Move down the z-axis for this layer
         z_layer -= layer_distance
@@ -686,9 +640,62 @@ def create_dataset(
         # Append
         data_list.append(data)
     # Save
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    if os.path.dirname(save_path):  # Check if there is a directory in the path
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
     torch.save(data_list, save_path)
     print(f"Dataset saved as {save_path}")
+
+
+def debug_exploit_last_three():
+    """
+    For each dist in [1..3] and type in [simple, crossed, classic], generate 50 samples.
+
+    We then check if the chirality of the last 3 nodes can be determined by the Priority-Based Triple-Product.
+    """
+
+    chirality_types = ["simple", "crossed", "classic"]
+    num_samples = 50
+    species_range = 15  # large enough for dist up to 9, if desired
+
+    for dist in range(1, 4):
+        for ctype in chirality_types:
+            matches = 0
+
+            for _ in range(num_samples):
+                # Generate a chiral instance (no noise for clarity)
+                data = create_chiral_instance(
+                    type=ctype,
+                    chirality_distance=dist,
+                    species_range=species_range,
+                    points=4,
+                    noise=True,
+                )
+
+                # ----------- Get CIP Ordering Among the Last 3 Node -----------
+                # NOTE it's hardcoded in sample creation that the last 3 nodes are the determining substituents
+                last3_z = data.atomic_numbers[-3:].flatten().tolist()  # e.g. [1, 3, 2]
+                priority_indices = sorted(
+                    range(3), key=lambda i: last3_z[i], reverse=True
+                )  # e.g. [1, 2, 0]
+
+                # ----------- (2) PRIORITY-BASED TRIPLE-PRODUCT -----------
+                # Get positions in priority order
+                last_3_pos = data.pos[-3:]
+                pos_ordered = [last_3_pos[i] for i in priority_indices]
+
+                # Do STP calculation
+                center_pos = data.pos[0]
+                vA = pos_ordered[0] - center_pos
+                vB = pos_ordered[1] - center_pos
+                vC = pos_ordered[2] - center_pos
+                stp = torch.dot(vA, torch.cross(vB, vC))
+
+                # By convention here, let's say: STP>0 => label=1 (R), STP<0 => label=2 (S).
+                observed_label = 1 if stp > 0 else 2
+                if observed_label == int(data.chirality[0].item()):  # 1=R, 2=S
+                    matches += 1
+
+            print(f"Dist={dist}, Type={ctype}: {matches}/{num_samples} matched")
 
 
 def main():
