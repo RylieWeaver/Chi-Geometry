@@ -21,6 +21,7 @@ def main():
     # Setup
     script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
     distances = [1, 2, 3]
+    chirality_types = ["simple", "crossed", "classic"]
 
     # Create datasets
     # dataset_config_path = os.path.join(script_dir, "dataset_config.json")
@@ -29,7 +30,7 @@ def main():
     # Args
     model_config_path = os.path.join(script_dir, "model_config.json")
     model_args = load_model_json(model_config_path)
-    noise = False
+    noise = True
     datadir = "datasets"
     device = torch.device(
         "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
@@ -47,11 +48,20 @@ def main():
     # Gather Composite Dataset
     dataset = []
     for dist in distances:
-        if noise:
-            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/dataset.pt")
-        else:
-            dataset_path = os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
-        dataset.extend(torch.load(dataset_path))
+        for chirality_type in chirality_types:
+            # if noise:
+            #     dataset_path = os.path.join(f"{datadir}/noise-{chirality_type}-type-{dist}-distance/dataset.pt")
+            # else:
+            #     dataset_path = os.path.join(f"{datadir}/{chirality_type}-type-{dist}-distance/dataset.pt")
+            # dataset.extend(torch.load(dataset_path))
+            dataset_path = os.path.join(
+                f"{datadir}/noise-{chirality_type}-type-{dist}-distance/dataset.pt"
+            )
+            dataset.extend(torch.load(dataset_path))
+            dataset_path = os.path.join(
+                f"{datadir}/{chirality_type}-type-{dist}-distance/dataset.pt"
+            )
+            dataset.extend(torch.load(dataset_path))
 
     # Shuffle and split dataset
     torch.manual_seed(42)
@@ -65,7 +75,7 @@ def main():
     )
 
     # Model
-    log_dir = f"logs/pretrained_local_e3nn"
+    log_dir = f"logs/pretrained_local_e3nn-noisy_and_deterministic-2"
     criterion = torch.nn.CrossEntropyLoss(weight=class_weights)
     model = Network(
         irreps_in=o3.Irreps(model_args["irreps_in"]),
@@ -84,7 +94,9 @@ def main():
         num_classes=model_args["num_classes"],
         num_heads=model_args["num_heads"],
     ).to(device)
-    print(f"Pre-Training model for distances {distances} and noise {noise}...")
+    print(
+        f"Pre-Training model for chirality types {chirality_types}, distances {distances}, and noise {noise}..."
+    )
     train_val_test_model_accuracies(
         model,
         model_args,
