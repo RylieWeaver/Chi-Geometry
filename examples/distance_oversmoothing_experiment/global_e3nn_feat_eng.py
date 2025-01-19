@@ -96,7 +96,7 @@ def global_connect_feat_eng(dataset, undirected=True):
 def main():
     # Setup
     script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-    distances = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    distances = [3, 4, 5, 6, 7, 8, 9]
 
     # Create datasets
     # dataset_config_path = os.path.join(script_dir, "dataset_config.json")
@@ -133,6 +133,7 @@ def main():
         model_args["layers"] = (
             4  # 4 is enough to propagate chirality information with global connections
         )
+        model_args["max_radius"] = 25.0
         model = Network(
             irreps_in=o3.Irreps(model_args["irreps_in"]),
             irreps_hidden=o3.Irreps(model_args["irreps_hidden"]),
