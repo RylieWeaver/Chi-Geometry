@@ -133,7 +133,7 @@ def main():
         model_args["layers"] = (
             4  # 4 is enough to propagate chirality information with global connections
         )
-        model_args["max_radius"] = 25.0
+        model_args["max_radius"] = 2.5 * (dist + 1)
         model = Network(
             irreps_in=o3.Irreps(model_args["irreps_in"]),
             irreps_hidden=o3.Irreps(model_args["irreps_hidden"]),
