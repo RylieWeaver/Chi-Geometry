@@ -22,7 +22,7 @@ from experiment_utils.model import Wrapped_Network
 from experiment_utils.train_val_test import train_val_test_model_no_accuracies
 
 
-def load_model_pretrained(pretrained_dir=None):
+def load_model_pretrained(device, pretrained_dir=None):
     # Choose model args
     script_dir = os.path.dirname(os.path.abspath(__file__))
     if pretrained_dir is not None:
@@ -30,9 +30,6 @@ def load_model_pretrained(pretrained_dir=None):
     else:
         model_config_path = os.path.join(script_dir, "model_config.json")
     model_args = load_model_json(model_config_path)
-    device = torch.device(
-        "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
-    )
 
     # Load model
     base = Network(
@@ -72,12 +69,16 @@ def load_model_pretrained(pretrained_dir=None):
     else:
         modelname = f"from-scratch_local_e3nn"
 
-    return model, model_args, modelname
+    return model, modelname
 
 
 def main():
     # Setup
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    model_args = load_model_json(os.path.join(script_dir, "model_config.json"))
+    device = torch.device(
+        "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
+    )
 
     # Load binding affinity dataset
     datadir = os.path.join(script_dir, "binding_affinity_data")
@@ -91,7 +92,7 @@ def main():
     random.shuffle(val_dataset)
 
     # Args
-    pretrained_dir = f"logs/pretrained_local_e3nn"
+    pretrained_dir = f"logs/pretrained_local_e3nn-noisy"
     criterion = torch.nn.MSELoss()
 
     # Run repeatedly for various dataset size
@@ -109,8 +110,8 @@ def main():
         for repetition in range(5):
             # Train a model from scratch
             print(f"Training model from scratch...")
-            model, model_args, modelname = load_model_pretrained(None)
-            log_dir = f"logs/binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition+1}"
+            model, modelname = load_model_pretrained(device, None)
+            log_dir = f"logs/noisy-binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition+1}"
             train_val_test_model_no_accuracies(
                 model,
                 model_args,
@@ -122,7 +123,8 @@ def main():
             )
             # Train a model from pretrained
             print(f"Training model from pretrained with dataset size {dataset_size}...")
-            model, model_args, modelname = load_model_pretrained(pretrained_dir)
+            model, modelname = load_model_pretrained(device, pretrained_dir)
+            log_dir = f"logs/noisy-binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition+1}"
             train_val_test_model_no_accuracies(
                 model,
                 model_args,
@@ -138,3 +140,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Changes:
+## pretrained_dir, log_dir for both
