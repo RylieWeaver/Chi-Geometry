@@ -10,9 +10,10 @@ import torch
 from e3nn import o3
 
 # Chi-Geometry
-from chi_geometry.model import Network, load_model_json
+from chi_geometry.model import load_model_json
 from experiment_utils.utils import create_all_datasets
 from experiment_utils.train_val_test import train_val_test_model
+from experiment_utils.model import CustomNetwork
 
 
 def global_connect_feat_eng(dataset, undirected=True):
@@ -96,7 +97,7 @@ def global_connect_feat_eng(dataset, undirected=True):
 def main():
     # Setup
     script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-    distances = [3, 4, 5, 6, 7, 8, 9]
+    distances = [8, 7]
 
     # Create datasets
     # dataset_config_path = os.path.join(script_dir, "dataset_config.json")
@@ -134,7 +135,7 @@ def main():
             4  # 4 is enough to propagate chirality information with global connections
         )
         model_args["max_radius"] = 2.5 * (dist + 1)
-        model = Network(
+        model = CustomNetwork(
             irreps_in=o3.Irreps(model_args["irreps_in"]),
             irreps_hidden=o3.Irreps(model_args["irreps_hidden"]),
             irreps_out=o3.Irreps(model_args["irreps_out"]),
