@@ -225,31 +225,42 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
     z_layer = 1.0
 
     # Step 7.1: Chiral Center position
-    positions.append([0.0, 0.0, z_layer])
+    if not noise:
+        positions.append([0.0, 0.0, z_layer])
+    else:
+        center_radius = random.uniform(0.0, 1.0)
+        center_angle = random.uniform(0.0, 2 * math.pi)
+        positions.append(
+            [
+                math.cos(center_angle) * center_radius,
+                math.sin(center_angle) * center_radius,
+                z_layer,
+            ]
+        )
 
     # Step 7.2: Following layer positions
     for _ in range(chirality_distance):
         if not noise:
             layer_distance = 0.5  # deterministic
             angle_noises = [0, 0, 0]
-            z_noises = [0, 0, 0]
-            radii = [1.0, 1.0, 1.0]
+            radius = 1.0
         else:
-            layer_distance = random.uniform(0.3, 2.0)
-            angle_noises = [random.uniform(-math.pi / 4, math.pi / 4) for _ in range(3)]
-            z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
-            radii = [random.uniform(0.1, 1.0) for _ in range(3)]
+            eps = 0.1
+            layer_distance = random.uniform(eps, 2.0)
+            angle_noises = [
+                random.uniform(-math.pi / (3 + eps), math.pi / (3 + eps))
+                for _ in range(3)
+            ]
+            radius = random.uniform(eps, 1.0)
 
         # Move down the z-axis for this layer
         z_layer -= layer_distance
         # Append 3 new points for this layer
-        for angle, angle_noise, radius, z_noise in zip(
-            base_angles, angle_noises, radii, z_noises
-        ):
+        for angle, angle_noise in zip(base_angles, angle_noises):
             final_angle = angle + angle_noise
             x = math.cos(final_angle) * radius
             y = math.sin(final_angle) * radius
-            z = z_layer + z_noise
+            z = z_layer
             positions.append([x, y, z])
 
     # Step 8: Create edge connections
@@ -646,23 +657,25 @@ def create_dataset(
     print(f"Dataset saved as {save_path}")
 
 
-def debug_exploit_last_three():
+def check_create_configuration():
     """
-    For each dist in [1..3] and type in [simple, crossed, classic], generate 50 samples.
+    For each dist in [1..8] and type in [simple], generate 500 samples.
 
-    We then check if the chirality of the last 3 nodes can be determined by the Priority-Based Triple-Product.
+    We then check if EVERY layer has a positive scalar triple product (STP)
+    using the CIP ordering among the last 3 nodes.
     """
 
-    chirality_types = ["simple", "crossed", "classic"]
-    num_samples = 50
+    # chirality_types = ["simple", "crossed", "classic"]
+    chirality_types = ["simple"]
+    num_samples = 500
     species_range = 15  # large enough for dist up to 9, if desired
 
-    for dist in range(1, 4):
+    for dist in range(1, 10):
         for ctype in chirality_types:
             matches = 0
 
             for _ in range(num_samples):
-                # Generate a chiral instance (no noise for clarity)
+                # Generate a chiral instance
                 data = create_chiral_instance(
                     type=ctype,
                     chirality_distance=dist,
@@ -671,31 +684,52 @@ def debug_exploit_last_three():
                     noise=True,
                 )
 
-                # ----------- Get CIP Ordering Among the Last 3 Node -----------
-                # NOTE it's hardcoded in sample creation that the last 3 nodes are the determining substituents
+                # Get CIP ordering among the last 3 nodes
+                # NOTE: It's hardcoded that the last 3 nodes are the determining substituents
                 last3_z = data.atomic_numbers[-3:].flatten().tolist()  # e.g. [1, 3, 2]
                 priority_indices = sorted(
                     range(3), key=lambda i: last3_z[i], reverse=True
                 )  # e.g. [1, 2, 0]
 
-                # ----------- (2) PRIORITY-BASED TRIPLE-PRODUCT -----------
-                # Get positions in priority order
-                last_3_pos = data.pos[-3:]
-                pos_ordered = [last_3_pos[i] for i in priority_indices]
+                # Flag to ensure ALL layers have a positive or negative STP
+                all_positive = True
+                all_negative = True
 
-                # Do STP calculation
-                center_pos = data.pos[0]
-                vA = pos_ordered[0] - center_pos
-                vB = pos_ordered[1] - center_pos
-                vC = pos_ordered[2] - center_pos
-                stp = torch.dot(vA, torch.cross(vB, vC))
+                # Check each layer from 1 to dist
+                index = 2 if ctype == "classic" else 1
+                for i in range(dist):
+                    # Get positions for the i-th layer
+                    # NOTE: The slice below may need adjustment depending on your layout logic
+                    pos_layer = data.pos[index : index + 3]
 
-                # By convention here, let's say: STP>0 => label=1 (R), STP<0 => label=2 (S).
-                observed_label = 1 if stp > 0 else 2
-                if observed_label == int(data.chirality[0].item()):  # 1=R, 2=S
+                    # Reorder them by CIP priority
+                    pos_ordered = [pos_layer[idx] for idx in priority_indices]
+
+                    # Compute STP with the chiral center at index 0
+                    center_pos = data.pos[0]
+                    vA = pos_ordered[0] - center_pos
+                    vB = pos_ordered[1] - center_pos
+                    vC = pos_ordered[2] - center_pos
+                    stp = torch.dot(vA, torch.cross(vB, vC))
+
+                    # If STP <= 0, we mark all_positive = False and break
+                    if stp < 0:
+                        all_positive = False
+                    elif stp > 0:
+                        all_negative = False
+                    if not all_positive and not all_negative:
+                        break
+
+                    # If classic chiral, increment index by 1
+                    index += 1 if ctype == "classic" else 0
+
+                # Only increment matches if ALL layers had positive STP
+                if all_positive or all_negative:
                     matches += 1
 
-            print(f"Dist={dist}, Type={ctype}: {matches}/{num_samples} matched")
+            print(
+                f"Dist={dist}, Type={ctype}: {matches}/{num_samples} matched (All STP > 0)"
+            )
 
 
 def main():
@@ -728,4 +762,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    check_create_configuration()
