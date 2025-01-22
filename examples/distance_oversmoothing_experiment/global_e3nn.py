@@ -10,7 +10,7 @@ from e3nn import o3
 
 # Chi-Geometry
 from chi_geometry.model import Network, load_model_json
-from experiment_utils.utils import create_all_datasets
+from experiment_utils.utils import create_all_datasets, make_global_connections
 from experiment_utils.train_val_test import train_val_test_model
 
 
@@ -40,6 +40,7 @@ def main():
         else:
             dataset_path = os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
         dataset = torch.load(dataset_path)
+        dataset = make_global_connections(dataset)
         print(f"Dataset contains {len(dataset)} graphs.")
 
         # Model
