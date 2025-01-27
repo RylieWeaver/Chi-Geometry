@@ -135,7 +135,7 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
     #         to the chirality just because of how we have set up appending the positions.
     ascending = random.choice([True, False])
     triplet_atoms.sort(reverse=ascending)
-    quadruplet_priority_idx = [-4, -3, -2, -1] if ascending else [-4, -1, -2, -3]
+    quadruplet_priority_idx = [1, 2, 3, 4] if ascending else [1, 4, 3, 2]
 
     # Step 8: Assign scalar triple product and check with expected
     center_pos = positions[0]
