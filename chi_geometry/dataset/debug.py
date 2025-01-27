@@ -34,7 +34,7 @@ def check_classic_configurations(num_samples=100, species_range=15, dist_range=9
             )  # e.g. [1, 3, 2, 4]  # NOTE: The first should have the lowest priority
             priority_indices = sorted(
                 range(4), key=lambda i: last4_z[i], reverse=True
-            )  # e.g. [1, 2, 0, 4]
+            )  # e.g. [3, 1, 2, 0]
 
             # Flag to ensure ALL layers have a positive or negative STP
             # The classic type has a simple geometry such that we'd expect
