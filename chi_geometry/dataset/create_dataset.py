@@ -1,5 +1,6 @@
 # General
 import os
+import warnings
 import random
 import math
 import numpy as np
@@ -12,6 +13,10 @@ from torch_geometric.data import Data
 
 # Chi-Geometry
 from chi_geometry.dataset import load_dataset_json, center_and_rotate_positions
+
+
+def scalar_triple_product(v1, v2, v3):
+    return np.dot(v1, np.cross(v2, v3))
 
 
 # NOTE Classic chiral configuration as defined in chemistry
@@ -52,64 +57,66 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
         atom for atom in quadruplet_atoms if atom not in lowest_priority_atom
     ]
 
-    # Step 5: Randomly decide R or S configuration
-    clockwise = random.choice([True, False])
-
-    # Step 6: Arrange atoms
-    if clockwise:
-        # Sort quadruplet atoms in ascending order (smallest to largest)
-        triplet_atoms.sort()
-        chirality_value = 1
-        chirality_tag = [0, 1, 0]
-        chirality_str = "R"
-    else:
-        # Sort quadruplet atoms in descending order (largest to smallest)
-        triplet_atoms.sort(reverse=True)
-        chirality_value = 2
-        chirality_tag = [0, 0, 1]
-        chirality_str = "S"
-
     # ------------------------------------
-    # Step 7: Assign positions with layers
+    # Step 5: Assign positions with layers
     # ------------------------------------
-    base_angles = [0, 2 * math.pi / 3, 4 * math.pi / 3]
+    base_angles = [0, -2 * math.pi / 3, -4 * math.pi / 3]
     positions = []
     z_layer = 1.0
     z_toplayer = 1.0
     z_bottomlayer = 1.0
 
-    # Step 7.1: Chiral Center position
-    positions.append([0.0, 0.0, z_layer])
+    # Step 5.1: Chiral Center position
+    if not noise:
+        positions.append([0.0, 0.0, z_layer])
+    else:
+        center_radius = random.uniform(0.0, 1.0)
+        center_angle = random.uniform(0.0, 2 * math.pi)
+        positions.append(
+            [
+                math.cos(center_angle) * center_radius,
+                math.sin(center_angle) * center_radius,
+                z_layer,
+            ]
+        )
 
-    # Step 7.2: Following layer positions
+    # Step 5.2: Following layer positions
     for _ in range(chirality_distance):
         if not noise:
             layer_distance = 0.5  # deterministic
-            angle_noises = [0, 0, 0, 0]
-            z_noises = [0, 0, 0, 0]
-            radii = [0.0, 1.0, 1.0, 1.0]
+            top_angle_noise = 0
+            bottom_angle_noises = [0, 0, 0]
+            top_radius = 0.0
+            bottom_radius = 1.0
         else:
-            layer_distance = random.uniform(0.3, 2.0)
-            angle_noises = [random.uniform(-math.pi / 4, math.pi / 4) for _ in range(3)]
-            z_noises = [random.uniform(-0.1, 0.1) for _ in range(4)]
-            radii = [random.uniform(0.1, 1.0) for _ in range(3)]
+            layer_distance = random.uniform(0.1, 1.5)
+            top_angle_noise = random.uniform(-math.pi, math.pi)
+            bottom_angle_noises = [
+                random.uniform(-math.pi / 3.1, math.pi / 3.1) for _ in range(3)
+            ]
+            top_radius = random.uniform(0.0, 1.0)
+            bottom_radius = random.uniform(0.1, 1.0)
 
-        # Append 1 new point for the top layer
+        # Move down the z-axis for this layer
         z_toplayer += layer_distance
-        z = z_toplayer + z_noises[0]
-        positions.append([0, 0, z])
-        # Append 3 new points for the bottom layer
+        positions.append(
+            [
+                math.cos(top_angle_noise) * top_radius,
+                math.sin(top_angle_noise) * top_radius,
+                z_toplayer,
+            ]
+        )
         z_bottomlayer -= layer_distance
-        for angle, angle_noise, radius, z_noise in zip(
-            base_angles, angle_noises, radii, z_noises[1:]
-        ):
+        # Append 3 new points for the bottom part of this layer
+        for angle, angle_noise in zip(base_angles, bottom_angle_noises):
             final_angle = angle + angle_noise
-            x = math.cos(final_angle) * radius
-            y = math.sin(final_angle) * radius
-            z = z_bottomlayer + z_noise
+            x = math.cos(final_angle) * bottom_radius
+            y = math.sin(final_angle) * bottom_radius
+            z = z_bottomlayer
             positions.append([x, y, z])
+    positions = torch.tensor(positions, dtype=torch.float)
 
-    # Step 8: Create edge connections
+    # Step 6: Create edge connections
     edges = []
     # Connect chiral center to lowest priority and substituent atoms (atom indices 1, 2, 3, 4)
     for i in range(1, 5):
@@ -122,11 +129,38 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
             dst = 4 * l + i + 1
             edges.append([src, dst])
             edges.append([dst, src])
+    edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+
+    # Step 7: Sort triplet atoms in ascending or descending order. This should correspond
+    #         to the chirality just because of how we have set up appending the positions.
+    ascending = random.choice([True, False])
+    triplet_atoms.sort(reverse=ascending)
+    quadruplet_priority_idx = [-4, -3, -2, -1] if ascending else [-4, -1, -2, -3]
+
+    # Step 8: Assign scalar triple product and check with expected
+    center_pos = positions[0]
+    stp = scalar_triple_product(
+        center_pos - positions[quadruplet_priority_idx[0]],
+        positions[quadruplet_priority_idx[2]] - positions[quadruplet_priority_idx[1]],
+        positions[quadruplet_priority_idx[3]] - positions[quadruplet_priority_idx[2]],
+    )
+    if stp > 0:
+        chirality_value = 1
+        chirality_tag = [0, 1, 0]
+        chirality_str = "R"
+    elif stp < 0:
+        chirality_value = 2
+        chirality_tag = [0, 0, 1]
+        chirality_str = "S"
+    else:
+        raise ValueError("Scalar triple product is 0")
 
     # Step 9: Assign chirality tags
     chirality = [chirality_value] + [0] * (4 * chirality_distance)
     chirality_tags = [chirality_tag] + [[1, 0, 0]] * (4 * chirality_distance)
     chirality_strs = [chirality_str] + ["N/A"] * (4 * chirality_distance)
+    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
+    chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
 
     # Step 10: Create node features and make sure they're tensors
     atomic_numbers = torch.tensor(
@@ -139,17 +173,11 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
     atomic_numbers_one_hot = (
         F.one_hot(atomic_numbers.squeeze() - 1, num_classes=118)
     ).float()  # Subtract 1 because atomic numbers start from 1
-    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
-    chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
-    positions = torch.tensor(positions, dtype=torch.float)
 
-    # Step 11: Create edge index and make sure it's a tensor
-    edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-
-    # Step 12: Apply centering and random rotation to positions
+    # Step 11: Apply centering and random rotation to positions
     positions = center_and_rotate_positions(positions)
 
-    # Step 13: Construct PyTorch Geometric data object
+    # Step 12: Construct PyTorch Geometric data object
     data = Data(
         x=atomic_numbers_one_hot.float(),
         y=chirality,
@@ -200,59 +228,52 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
         if atom != chiral_center and atom not in intermediate_layers
     ]
 
-    # Step 5: Randomly decide clockwise or counterclockwise placement
-    clockwise = random.choice([True, False])
-
-    # Step 6: Arrange atoms
-    if clockwise:
-        # Sort other atoms in ascending order (smallest to largest)
-        triplet_atoms.sort()
-        chirality_value = 1
-        chirality_tag = [0, 1, 0]
-        chirality_str = "R"
-    else:
-        # Sort other atoms in descending order (largest to smallest)
-        triplet_atoms.sort(reverse=True)
-        chirality_value = 2
-        chirality_tag = [0, 0, 1]
-        chirality_str = "S"
-
     # ------------------------------------
-    # Step 7: Assign positions with layers
+    # Step 5: Assign positions with layers
     # ------------------------------------
-    base_angles = [0, 2 * math.pi / 3, 4 * math.pi / 3]
+    base_angles = [0, -2 * math.pi / 3, -4 * math.pi / 3]
     positions = []
     z_layer = 1.0
 
-    # Step 7.1: Chiral Center position
-    positions.append([0.0, 0.0, z_layer])
+    # Step 5.1: Chiral Center position
+    if not noise:
+        positions.append([0.0, 0.0, z_layer])
+    else:
+        center_radius = random.uniform(0.0, 1.0)
+        center_angle = random.uniform(0.0, 2 * math.pi)
+        positions.append(
+            [
+                math.cos(center_angle) * center_radius,
+                math.sin(center_angle) * center_radius,
+                z_layer,
+            ]
+        )
 
-    # Step 7.2: Following layer positions
+    # Step 5.2: Following layer positions
     for _ in range(chirality_distance):
         if not noise:
             layer_distance = 0.5  # deterministic
             angle_noises = [0, 0, 0]
-            z_noises = [0, 0, 0]
-            radii = [1.0, 1.0, 1.0]
+            radius = 1.0
         else:
-            layer_distance = random.uniform(0.3, 2.0)
-            angle_noises = [random.uniform(-math.pi / 4, math.pi / 4) for _ in range(3)]
-            z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
-            radii = [random.uniform(0.1, 1.0) for _ in range(3)]
+            layer_distance = random.uniform(0.1, 1.5)
+            angle_noises = [
+                random.uniform(-math.pi / 3.1, math.pi / 3.1) for _ in range(3)
+            ]
+            radius = random.uniform(0.1, 1.0)
 
         # Move down the z-axis for this layer
         z_layer -= layer_distance
         # Append 3 new points for this layer
-        for angle, angle_noise, radius, z_noise in zip(
-            base_angles, angle_noises, radii, z_noises
-        ):
+        for angle, angle_noise in zip(base_angles, angle_noises):
             final_angle = angle + angle_noise
             x = math.cos(final_angle) * radius
             y = math.sin(final_angle) * radius
-            z = z_layer + z_noise
+            z = z_layer
             positions.append([x, y, z])
+    positions = torch.tensor(positions, dtype=torch.float)
 
-    # Step 8: Create edge connections
+    # Step 6: Create edge connections
     edges = []
     # Connect chiral center (0) to first layer atoms (1, 2, 3)
     for i in range(1, 4):
@@ -265,11 +286,39 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
             dst = 3 * layer + 1 + i
             edges.append([src, dst])
             edges.append([dst, src])
+    edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+
+    # Step 7: Sort triplet atoms in ascending or descending order. This should correspond
+    #         to the chirality just because of how we have set up appending the positions.
+    ascending = random.choice(
+        [True, False]
+    )  # ascending has the largest atomic number first
+    triplet_atoms.sort(reverse=ascending)
+    triplet_priority_idx = [1, 2, 3] if ascending else [3, 2, 1]
+
+    # Step 8: Assign scalar triple product and check with expected
+    stp = scalar_triple_product(
+        positions[triplet_priority_idx[0]] - positions[0],
+        positions[triplet_priority_idx[1]] - positions[0],
+        positions[triplet_priority_idx[2]] - positions[0],
+    )
+    if stp > 0:
+        chirality_value = 1
+        chirality_tag = [0, 1, 0]
+        chirality_str = "R"
+    elif stp < 0:
+        chirality_value = 2
+        chirality_tag = [0, 0, 1]
+        chirality_str = "S"
+    else:
+        raise ValueError("Scalar triple product is 0")
 
     # Step 9: Assign chirality tags
     chirality = [chirality_value] + [0] * (3 * chirality_distance)
     chirality_tags = [chirality_tag] + [[1, 0, 0]] * (3 * chirality_distance)
     chirality_strs = [[chirality_str] + ["N/A"] * (3 * chirality_distance)]
+    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
+    chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
 
     # Step 10: Create node features and make sure they're tensors
     atomic_numbers = torch.tensor(
@@ -281,17 +330,11 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
     atomic_numbers_one_hot = (
         F.one_hot(atomic_numbers.squeeze() - 1, num_classes=118)
     ).float()  # Subtract 1 because atomic numbers start from 1
-    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
-    chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
-    positions = torch.tensor(positions, dtype=torch.float)
 
-    # Step 11: Create edge index and make sure its a tensor
-    edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-
-    # Step 12: Apply centering and random rotation to positions
+    # Step 11: Apply centering and random rotation to positions
     positions = center_and_rotate_positions(positions)
 
-    # Step 13: Construct PyTorch Geometric data object
+    # Step 12: Construct PyTorch Geometric data object
     data = Data(
         x=atomic_numbers_one_hot.float(),
         y=chirality,
@@ -342,59 +385,52 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
         if atom != chiral_center and atom not in intermediate_layers
     ]
 
-    # Step 5: Randomly decide clockwise or counterclockwise placement
-    clockwise = random.choice([True, False])
-
-    # Step 6: Arrange atoms
-    if clockwise:
-        # Sort other atoms in ascending order (smallest to largest)
-        triplet_atoms.sort()
-        chirality_value = 1
-        chirality_tag = [0, 1, 0]
-        chirality_str = "R"
-    else:
-        # Sort other atoms in descending order (largest to smallest)
-        triplet_atoms.sort(reverse=True)
-        chirality_value = 2
-        chirality_tag = [0, 0, 1]
-        chirality_str = "S"
-
     # ------------------------------------
-    # Step 7: Assign positions with layers
+    # Step 5: Assign positions with layers
     # ------------------------------------
-    base_angles = [0, 2 * math.pi / 3, 4 * math.pi / 3]
+    base_angles = [0, -2 * math.pi / 3, -4 * math.pi / 3]
     positions = []
     z_layer = 1.0
 
-    # Step 7.1: Chiral Center position
-    positions.append([0.0, 0.0, z_layer])
+    # Step 5.1: Chiral Center position
+    if not noise:
+        positions.append([0.0, 0.0, z_layer])
+    else:
+        center_radius = random.uniform(0.0, 1.0)
+        center_angle = random.uniform(0.0, 2 * math.pi)
+        positions.append(
+            [
+                math.cos(center_angle) * center_radius,
+                math.sin(center_angle) * center_radius,
+                z_layer,
+            ]
+        )
 
-    # Step 7.2: Following layer positions
+    # Step 5.2: Following layer positions
     for _ in range(chirality_distance):
         if not noise:
             layer_distance = 0.5  # deterministic
             angle_noises = [0, 0, 0]
-            z_noises = [0, 0, 0]
-            radii = [1.0, 1.0, 1.0]
+            radius = 1.0
         else:
-            layer_distance = random.uniform(0.3, 2.0)
-            angle_noises = [random.uniform(-math.pi / 4, math.pi / 4) for _ in range(3)]
-            z_noises = [random.uniform(-0.1, 0.1) for _ in range(3)]
-            radii = [random.uniform(0.1, 1.0) for _ in range(3)]
+            layer_distance = random.uniform(0.1, 1.5)
+            angle_noises = [
+                random.uniform(-math.pi / 3.1, math.pi / 3.1) for _ in range(3)
+            ]
+            radius = random.uniform(0.1, 1.0)
 
         # Move down the z-axis for this layer
         z_layer -= layer_distance
         # Append 3 new points for this layer
-        for angle, angle_noise, radius, z_noise in zip(
-            base_angles, angle_noises, radii, z_noises
-        ):
+        for angle, angle_noise in zip(base_angles, angle_noises):
             final_angle = angle + angle_noise
             x = math.cos(final_angle) * radius
             y = math.sin(final_angle) * radius
-            z = z_layer + z_noise
+            z = z_layer
             positions.append([x, y, z])
+    positions = torch.tensor(positions, dtype=torch.float)
 
-    # Step 8: Create edge connections
+    # Step 6: Create edge connections
     edges = []
     # Connect chiral center (0) to first layer atoms (1, 2, 3)
     for i in range(1, 4):
@@ -409,11 +445,39 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
             dst = 3 * layer + 1 + permutation[i]
             edges.append([src, dst])
             edges.append([dst, src])
+    edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+
+    # Step 7: Sort triplet atoms in ascending or descending order. This should correspond
+    #         to the chirality just because of how we have set up appending the positions.
+    ascending = random.choice(
+        [True, False]
+    )  # ascending has the largest atomic number first
+    triplet_atoms.sort(reverse=ascending)
+    triplet_priority_idx = [-3, -2, -1] if ascending else [-1, -2, -3]
+
+    # Step 8: Assign scalar triple product
+    stp = scalar_triple_product(
+        positions[triplet_priority_idx[0]] - positions[0],
+        positions[triplet_priority_idx[1]] - positions[0],
+        positions[triplet_priority_idx[2]] - positions[0],
+    )
+    if stp > 0:
+        chirality_value = 1
+        chirality_tag = [0, 1, 0]
+        chirality_str = "R"
+    elif stp < 0:
+        chirality_value = 2
+        chirality_tag = [0, 0, 1]
+        chirality_str = "S"
+    else:
+        raise ValueError("Scalar triple product is 0")
 
     # Step 9: Assign chirality tags
     chirality = [chirality_value] + [0] * (3 * chirality_distance)
     chirality_tags = [chirality_tag] + [[1, 0, 0]] * (3 * chirality_distance)
     chirality_strs = [chirality_str] + ["N/A"] * (3 * chirality_distance)
+    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
+    chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
 
     # Step 10: Create node features and make sure they're tensors
     atomic_numbers = torch.tensor(
@@ -425,17 +489,11 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
     atomic_numbers_one_hot = (
         F.one_hot(atomic_numbers.squeeze() - 1, num_classes=118)
     ).float()  # Subtract 1 because atomic numbers start from 1
-    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
-    chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
-    positions = torch.tensor(positions, dtype=torch.float)
 
-    # Step 11: Create edge index and make sure its a tensor
-    edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
-
-    # Step 12: Apply centering and random rotation to positions
+    # Step 11: Apply centering and random rotation to positions
     positions = center_and_rotate_positions(positions)
 
-    # Step 13: Construct PyTorch Geometric data object
+    # Step 12: Construct PyTorch Geometric data object
     data = Data(
         x=atomic_numbers_one_hot.float(),
         y=chirality,
@@ -644,58 +702,6 @@ def create_dataset(
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
     torch.save(data_list, save_path)
     print(f"Dataset saved as {save_path}")
-
-
-def debug_exploit_last_three():
-    """
-    For each dist in [1..3] and type in [simple, crossed, classic], generate 50 samples.
-
-    We then check if the chirality of the last 3 nodes can be determined by the Priority-Based Triple-Product.
-    """
-
-    chirality_types = ["simple", "crossed", "classic"]
-    num_samples = 50
-    species_range = 15  # large enough for dist up to 9, if desired
-
-    for dist in range(1, 4):
-        for ctype in chirality_types:
-            matches = 0
-
-            for _ in range(num_samples):
-                # Generate a chiral instance (no noise for clarity)
-                data = create_chiral_instance(
-                    type=ctype,
-                    chirality_distance=dist,
-                    species_range=species_range,
-                    points=4,
-                    noise=True,
-                )
-
-                # ----------- Get CIP Ordering Among the Last 3 Node -----------
-                # NOTE it's hardcoded in sample creation that the last 3 nodes are the determining substituents
-                last3_z = data.atomic_numbers[-3:].flatten().tolist()  # e.g. [1, 3, 2]
-                priority_indices = sorted(
-                    range(3), key=lambda i: last3_z[i], reverse=True
-                )  # e.g. [1, 2, 0]
-
-                # ----------- (2) PRIORITY-BASED TRIPLE-PRODUCT -----------
-                # Get positions in priority order
-                last_3_pos = data.pos[-3:]
-                pos_ordered = [last_3_pos[i] for i in priority_indices]
-
-                # Do STP calculation
-                center_pos = data.pos[0]
-                vA = pos_ordered[0] - center_pos
-                vB = pos_ordered[1] - center_pos
-                vC = pos_ordered[2] - center_pos
-                stp = torch.dot(vA, torch.cross(vB, vC))
-
-                # By convention here, let's say: STP>0 => label=1 (R), STP<0 => label=2 (S).
-                observed_label = 1 if stp > 0 else 2
-                if observed_label == int(data.chirality[0].item()):  # 1=R, 2=S
-                    matches += 1
-
-            print(f"Dist={dist}, Type={ctype}: {matches}/{num_samples} matched")
 
 
 def main():
