@@ -1,9 +1,9 @@
 {
-    "num_samples": 5000,
+    "num_samples": 50,
     "type": "simple",
     "chirality_distance": 2,
     "species_range": 15,
     "save_path": "dataset.pt",
     "cmap": "viridis",
-    "noise": true
+    "noise": false
 }
