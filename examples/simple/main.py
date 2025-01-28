@@ -1,8 +1,8 @@
 # General
 import os
-import torch
 
 # Torch
+import torch
 from torch_geometric.loader import DataLoader
 
 # E3NN
@@ -82,8 +82,8 @@ def main():
     # Training loop
     for epoch in range(1, model_args["epochs"] + 1):
         loss = train(model, train_loader, optimizer, criterion, device)
-        train_accuracies = test(model, train_loader, criterion, device, num_classes)
-        test_accuracies = test(model, test_loader, criterion, device, num_classes)
+        _, train_accuracies = test(model, train_loader, criterion, device, num_classes)
+        _, test_accuracies = test(model, test_loader, criterion, device, num_classes)
 
         # Format accuracies
         train_acc_str = ", ".join(
