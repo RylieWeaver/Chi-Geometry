@@ -60,7 +60,11 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
     # ------------------------------------
     # Step 5: Assign positions with layers
     # ------------------------------------
-    base_angles = [0, -2 * math.pi / 3, -4 * math.pi / 3]
+    base_angles = [
+        0,
+        2 * math.pi / 3,
+        4 * math.pi / 3,
+    ]  # Clockwise when viewed from negative z-axis
     positions = []
     z_layer = 1.0
     z_toplayer = 1.0
@@ -135,14 +139,16 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
     #         to the chirality just because of how we have set up appending the positions.
     ascending = random.choice([True, False])
     triplet_atoms.sort(reverse=ascending)
-    quadruplet_priority_idx = [1, 2, 3, 4] if ascending else [1, 4, 3, 2]
+    quadruplet_priority_idx = (
+        [1, 4, 3, 2] if ascending else [1, 2, 3, 4]
+    )  # idx of atoms from lowest to highest priority
 
     # Step 8: Assign scalar triple product and check with expected
     center_pos = positions[0]
     stp = scalar_triple_product(
-        center_pos - positions[quadruplet_priority_idx[0]],
-        positions[quadruplet_priority_idx[2]] - positions[quadruplet_priority_idx[1]],
-        positions[quadruplet_priority_idx[3]] - positions[quadruplet_priority_idx[2]],
+        positions[quadruplet_priority_idx[0]] - center_pos,
+        positions[quadruplet_priority_idx[2]] - positions[quadruplet_priority_idx[3]],
+        positions[quadruplet_priority_idx[1]] - positions[quadruplet_priority_idx[2]],
     )
     if stp > 0:
         chirality_value = 1
@@ -231,7 +237,11 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
     # ------------------------------------
     # Step 5: Assign positions with layers
     # ------------------------------------
-    base_angles = [0, -2 * math.pi / 3, -4 * math.pi / 3]
+    base_angles = [
+        0,
+        2 * math.pi / 3,
+        4 * math.pi / 3,
+    ]  # Clockwise when viewed from negative z-axis
     positions = []
     z_layer = 1.0
 
@@ -294,13 +304,24 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
         [True, False]
     )  # ascending has the largest atomic number first
     triplet_atoms.sort(reverse=ascending)
-    triplet_priority_idx = [1, 2, 3] if ascending else [3, 2, 1]
+    triplet_priority_idx = (
+        [3, 2, 1] if ascending else [1, 2, 3]
+    )  # idx of atoms from lowest to highest priority
 
     # Step 8: Assign scalar triple product and check with expected
     stp = scalar_triple_product(
-        positions[triplet_priority_idx[0]] - positions[0],
-        positions[triplet_priority_idx[1]] - positions[0],
-        positions[triplet_priority_idx[2]] - positions[0],
+        positions[0]
+        - positions[
+            triplet_priority_idx[2]
+        ],  # Relative vector from highest priority neighbor to the chiral center
+        positions[0]
+        - positions[
+            triplet_priority_idx[1]
+        ],  # Relative vector from second highest priority neighbor to the chiral center
+        positions[0]
+        - positions[
+            triplet_priority_idx[0]
+        ],  # Relative vector from lowest priority neighbor to the chiral center
     )
     if stp > 0:
         chirality_value = 1
@@ -388,7 +409,11 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
     # ------------------------------------
     # Step 5: Assign positions with layers
     # ------------------------------------
-    base_angles = [0, -2 * math.pi / 3, -4 * math.pi / 3]
+    base_angles = [
+        0,
+        2 * math.pi / 3,
+        4 * math.pi / 3,
+    ]  # Clockwise when viewed from negative z-axis
     positions = []
     z_layer = 1.0
 
@@ -453,13 +478,24 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
         [True, False]
     )  # ascending has the largest atomic number first
     triplet_atoms.sort(reverse=ascending)
-    triplet_priority_idx = [-3, -2, -1] if ascending else [-1, -2, -3]
+    triplet_priority_idx = (
+        [-1, -2, -3] if ascending else [-3, -2, -1]
+    )  # idx of atoms from lowest to highest priority
 
     # Step 8: Assign scalar triple product
     stp = scalar_triple_product(
-        positions[triplet_priority_idx[0]] - positions[0],
-        positions[triplet_priority_idx[1]] - positions[0],
-        positions[triplet_priority_idx[2]] - positions[0],
+        positions[0]
+        - positions[
+            triplet_priority_idx[2]
+        ],  # Relative vector from highest priority neighbor to the chiral center
+        positions[0]
+        - positions[
+            triplet_priority_idx[1]
+        ],  # Relative vector from second highest priority neighbor to the chiral center
+        positions[0]
+        - positions[
+            triplet_priority_idx[0]
+        ],  # Relative vector from lowest priority neighbor to the chiral center
     )
     if stp > 0:
         chirality_value = 1

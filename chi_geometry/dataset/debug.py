@@ -25,16 +25,18 @@ def check_classic_configurations(num_samples=100, species_range=15, dist_range=9
                 chirality_distance=dist,
                 species_range=species_range,
                 points=4,
-                noise=False,
+                noise=True,
             )
 
-            # Get CIP ordering among the last 3 nodes
+            # Get CIP ordering among the 4 nodes
             last4_z = (
                 data.atomic_numbers[-4:].flatten().tolist()
-            )  # e.g. [1, 3, 2, 4]  # NOTE: The first should have the lowest priority
+            )  # e.g. [1, 6, 4, 3]  # NOTE: The last should have the highest priority
             priority_indices = sorted(
-                range(4), key=lambda i: last4_z[i], reverse=True
-            )  # e.g. [3, 1, 2, 0]
+                range(4),
+                key=lambda i: last4_z[i],
+                reverse=False,  # idx of atoms from lowest to highest priority
+            )  # e.g. [1, 2, 3, 0]
 
             # Flag to ensure ALL layers have a positive or negative STP
             # The classic type has a simple geometry such that we'd expect
@@ -48,15 +50,12 @@ def check_classic_configurations(num_samples=100, species_range=15, dist_range=9
                 # Get positions for the (i+1)-th layer
                 pos_layer = data.pos[slice[0] : slice[1]]
 
-                # Reorder the positions by CIP priority
-                pos_ordered = [pos_layer[idx] for idx in priority_indices]
-
                 # Compute STP with the chiral center at index 0
                 center_pos = data.pos[0]
                 stp = scalar_triple_product(
-                    center_pos - pos_ordered[3],
-                    pos_ordered[1] - pos_ordered[0],
-                    pos_ordered[2] - pos_ordered[1],
+                    pos_layer[priority_indices[0]] - center_pos,
+                    pos_layer[priority_indices[2]] - pos_layer[priority_indices[3]],
+                    pos_layer[priority_indices[1]] - pos_layer[priority_indices[2]],
                 )
 
                 # Check stp is consistent and break if not
@@ -99,7 +98,9 @@ def check_simple_configurations(num_samples=100, species_range=15, dist_range=9)
             # Get CIP ordering among the last 3 nodes
             last3_z = data.atomic_numbers[-3:].flatten().tolist()  # e.g. [1, 3, 2]
             priority_indices = sorted(
-                range(3), key=lambda i: last3_z[i], reverse=True
+                range(3),
+                key=lambda i: last3_z[i],
+                reverse=False,  # idx of atoms from lowest to highest priority
             )  # e.g. [1, 2, 0]
 
             # Flag to ensure ALL layers have a positive or negative STP
@@ -120,9 +121,9 @@ def check_simple_configurations(num_samples=100, species_range=15, dist_range=9)
                 # Compute STP with the chiral center at index 0
                 center_pos = data.pos[0]
                 stp = scalar_triple_product(
-                    pos_ordered[0] - center_pos,
-                    pos_ordered[1] - center_pos,
-                    pos_ordered[2] - center_pos,
+                    center_pos - pos_ordered[2],
+                    center_pos - pos_ordered[1],
+                    center_pos - pos_ordered[0],
                 )
 
                 # Check stp is consistent and break if not
@@ -176,9 +177,9 @@ def check_crossed_configurations(num_samples=100, species_range=15, dist_range=9
                 # Compute STP with the chiral center at index 0
                 center_pos = data.pos[0]
                 stp = scalar_triple_product(
-                    pos_layer[0] - center_pos,
-                    pos_layer[1] - center_pos,
-                    pos_layer[2] - center_pos,
+                    center_pos - pos_layer[0],
+                    center_pos - pos_layer[1],
+                    center_pos - pos_layer[2],
                 )
 
                 # Check stp is consistent and break if not
@@ -190,22 +191,21 @@ def check_crossed_configurations(num_samples=100, species_range=15, dist_range=9
             # Get CIP ordering among the last 3 nodes
             last3_z = data.atomic_numbers[-3:].flatten().tolist()  # e.g. [1, 3, 2]
             priority_indices = sorted(
-                range(3), key=lambda i: last3_z[i], reverse=True
-            )  # e.g. [1, 2, 0]
+                range(3),
+                key=lambda i: last3_z[i],
+                reverse=False,  # idx of atoms from lowest to highest priority
+            )  # e.g. [0, 2, 1]
 
             # Get positions for the dist-th layer
             slice = [(dist - 1) * 3 + 1, dist * 3 + 1]
             pos_layer = data.pos[slice[0] : slice[1]]
 
-            # Reorder the positions by CIP priority
-            pos_ordered = [pos_layer[idx] for idx in priority_indices]
-
             # Compute STP with the chiral center at index 0
             center_pos = data.pos[0]
             stp = scalar_triple_product(
-                pos_ordered[0] - center_pos,
-                pos_ordered[1] - center_pos,
-                pos_ordered[2] - center_pos,
+                center_pos - pos_layer[priority_indices[2]],
+                center_pos - pos_layer[priority_indices[1]],
+                center_pos - pos_layer[priority_indices[0]],
             )
 
             # Check stp is consistent and break if not
