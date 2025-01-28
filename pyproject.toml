@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chi-geometry"
+version = "0.1.0"
+description = "A library for generating geometric chiral datasets."
+readme = "README.md"
+authors = [
+    { name = "Rylie Weaver", email = "rylieweaver9@gmail.com" },
+]
+license = { text = "MIT" }
+keywords = [
+    "chiral",
+    "chirality",
+    "machine-learning",
+    "equivariance",
+    "equivariant",
+    "geometry",
+    "torch"
+]
+dependencies = [
+    "numpy>=1.20.0",
+    "scipy>=1.5.0",
+    "torch>=2.0.0",
+    "torch-geometric>=2.0.0",
+    "torch-scatter>=2.0.0",
+    "tqdm",
+    "e3nn>=0.5.3"
+]
+python = ">=3.8"
+
+[project.urls]
+Documentation = "https://github.com/RylieWeaver/Chi-Geometry"
+Source = "https://github.com/RylieWeaver/Chi-Geometry"
+Tracker = "https://github.com/RylieWeaver/Chi-Geometry/issues"
