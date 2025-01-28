@@ -114,7 +114,7 @@ def test_run_model(ctype, distance, noise):
             save_path=save_path,
             noise=noise,
         )
-    dataset = torch.load(save_path)
+    dataset = torch.load(save_path, weights_only=False)
 
     # Run model
     run_model(dataset, model_args)

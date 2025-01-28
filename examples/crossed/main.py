@@ -36,7 +36,7 @@ def main():
             points=dataset_args["points"],
             save_path=dataset_args["save_path"],
         )
-    dataset = torch.load(dataset_args["save_path"])
+    dataset = torch.load(dataset_args["save_path"], weights_only=False)
     print(f"Dataset contains {len(dataset)} graphs.")
 
     # Shuffle and split dataset

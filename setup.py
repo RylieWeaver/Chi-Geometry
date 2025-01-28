@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="chi-geometry",
+    name="chi_geometry",
     version="0.1.0",
     description="A library for generating and analyzing chiral-aware datasets and models.",
     long_description=open("README.md").read(),
@@ -19,6 +19,7 @@ setup(
         "torch_geometric>=2.0.0",
         "torch_scatter>=2.0.0",
         "tqdm",
+        "matplotlib>=3.6.0",
         "e3nn>=0.5.3",
     ],
     classifiers=[
