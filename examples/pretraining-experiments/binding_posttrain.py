@@ -5,6 +5,7 @@ import datetime
 import argparse
 from tqdm import tqdm
 import random
+import gc
 
 # Torch
 import torch
@@ -85,33 +86,47 @@ def main():
     train_dataset = torch.load(os.path.join(datadir, "train.pt"))
     val_dataset = torch.load(os.path.join(datadir, "val.pt"))
     test_dataset = torch.load(os.path.join(datadir, "test.pt"))
-    # Shuffle subsetted datasets
-    torch.manual_seed(42)
-    random.seed(42)
     random.shuffle(train_dataset)
     random.shuffle(val_dataset)
 
     # Args
-    pretrained_dir = f"logs/pretrained_local_e3nn-noisy"
+    pretrained_dir = f"logs/pretrained_local_e3nn-noisy_and_deterministic-2"
     criterion = torch.nn.MSELoss()
 
     # Run repeatedly for various dataset size
-    for dataset_size in [100, 316, 1000, 3162, 10000]:
+    # for dataset_size in [10, 18, 32, 56, 100, 178, 316, 562, 1000]:
+    for dataset_size in [1000]:
 
-        # Get dataset
-        train = train_dataset[:dataset_size]
-        val = val_dataset[: int(0.125 * dataset_size)]
-        test = test_dataset
-        print(
-            f"SAMPLE NUMBERS: Train: {len(train)}, Val: {len(val)}, Test: {len(test)}"
-        )
+        # Set up repetitions
+        num_repetitions = 100
+        val_size = int(0.125 * dataset_size)
+        # We should have enough samples for both train and val repetitions without reusing samples to ensure bootstrap independence
+        assert len(train_dataset) >= dataset_size * num_repetitions
+        assert len(val_dataset) >= val_size * num_repetitions
 
         # Train models repeatedly
-        for repetition in range(5):
+        for repetition in range(75, 100):
+
+            # Get subset which will be used for both scratch and pretrained
+            train = train_dataset[
+                dataset_size * repetition : dataset_size * (repetition + 1)
+            ]
+            val = val_dataset[val_size * repetition : val_size * (repetition + 1)]
+            test = test_dataset  # No subsetting or shuffling necessary for the test set
+            print(
+                f"SAMPLE NUMBERS: Train: {len(train)}, Val: {len(val)}, Test: {len(test)}"
+            )
+
+            # Set a seed to be consistent between each pair but different between repetitions
+            seed = 42 + repetition
+            random.seed(seed)
+            torch.manual_seed(seed)
+            python_state = random.getstate()
+            torch_state = torch.get_rng_state()
             # Train a model from scratch
             print(f"Training model from scratch...")
             model, modelname = load_model_pretrained(device, None)
-            log_dir = f"logs/noisy-binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition+1}"
+            log_dir = f"logs_full-trained2/binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition+1}"
             train_val_test_model_no_accuracies(
                 model,
                 model_args,
@@ -121,10 +136,14 @@ def main():
                 criterion,
                 log_dir,
             )
+
+            # Reset random state
+            random.setstate(python_state)
+            torch.set_rng_state(torch_state)
             # Train a model from pretrained
             print(f"Training model from pretrained with dataset size {dataset_size}...")
             model, modelname = load_model_pretrained(device, pretrained_dir)
-            log_dir = f"logs/noisy-binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition+1}"
+            log_dir = f"logs_full-trained2/binding_affinity-{modelname}-{dataset_size}-samples-repetition-{repetition+1}"
             train_val_test_model_no_accuracies(
                 model,
                 model_args,
@@ -140,7 +159,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# Changes:
-## pretrained_dir, log_dir for both
