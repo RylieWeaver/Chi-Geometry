@@ -5,8 +5,7 @@ import numpy as np
 import torch
 
 # Chi-Geometry
-import chi_geometry
-from chi_geometry.dataset import create_chiral_instance, scalar_triple_product
+from chi_geometry import create_chiral_instance, scalar_triple_product
 
 
 def check_classic_configurations(num_samples=100, species_range=15, dist_range=9):

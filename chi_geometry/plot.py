@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
 # Custom
-import chi_geometry
-from chi_geometry.dataset import load_dataset_json
+from chi_geometry import load_dataset_json
 
 
 def plot_graph(graph, cmap="viridis"):
@@ -73,7 +72,7 @@ def main():
     args = load_dataset_json(config_path)
 
     # Load dataset and select the first molecule/graph
-    dataset = torch.load(dataset_path=args["save_path"])
+    dataset = torch.load(args["save_path"], weights_only=False)
     graph = dataset[0]
 
     # Plot

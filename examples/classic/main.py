@@ -9,9 +9,8 @@ from torch_geometric.loader import DataLoader
 from e3nn import o3
 
 # Custom
-import chi_geometry
-from chi_geometry.dataset import load_dataset_json, create_dataset
-from chi_geometry.model import Network, load_model_json, train, test
+from chi_geometry import load_dataset_json, create_dataset
+from examples.model import Network, load_model_json, train, test
 
 
 def main():
@@ -28,16 +27,22 @@ def main():
     print(f"Using device: {device}")
 
     # Load dataset
-    if not os.path.exists(dataset_args["save_path"]):
-        create_dataset(
+    save_path = dataset_args["save_path"]
+    if not os.path.exists(save_path):
+        dataset = create_dataset(
             num_samples=dataset_args["num_samples"],
             type=dataset_args["type"],
             chirality_distance=dataset_args["chirality_distance"],
             species_range=dataset_args["species_range"],
             points=dataset_args["points"],
-            save_path=dataset_args["save_path"],
         )
-    dataset = torch.load(dataset_args["save_path"], weights_only=False)
+        if os.path.dirname(save_path):  # Check if there is a directory in the path
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        torch.save(dataset, save_path)
+        print(f"Dataset saved as {save_path}")
+    else:
+        dataset = torch.load(save_path, weights_only=False)
+        print(f"Dataset loaded from {save_path}")
     print(f"Dataset contains {len(dataset)} graphs.")
 
     # Shuffle and split dataset

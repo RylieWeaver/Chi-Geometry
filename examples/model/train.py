@@ -5,8 +5,7 @@ from tqdm import tqdm
 import torch
 
 # Custom
-import chi_geometry
-from chi_geometry.model import process_batch
+from examples.model import process_batch
 
 
 # Training Function

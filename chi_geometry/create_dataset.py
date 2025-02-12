@@ -12,8 +12,7 @@ import torch.nn.functional as F
 from torch_geometric.data import Data
 
 # Chi-Geometry
-import chi_geometry
-from chi_geometry.dataset import load_dataset_json, center_and_rotate_positions
+from chi_geometry import load_dataset_json, center_and_rotate_positions
 
 
 def scalar_triple_product(v1, v2, v3):
@@ -670,7 +669,9 @@ def create_pure_chiral_instance(points=4, species_range=10):
     return data
 
 
-def create_chiral_instance(type, chirality_distance, species_range, points, noise):
+def create_chiral_instance(
+    type="simple", chirality_distance=1, species_range=15, points=4, noise=False
+):
     assert (
         species_range <= 118
     ), "Species range must be less than or equal to 118 (number of elements in the periodic table)"
@@ -705,7 +706,6 @@ def create_dataset(
     chirality_distance=1,
     species_range=10,
     points=4,
-    save_path="dataset.pt",
     noise=False,
 ):
     # Communication
@@ -715,7 +715,6 @@ def create_dataset(
         print(f"Type: {type}")
         print(f"Species range: {species_range}")
         print(f"Points: {points}")
-        print(f"Save path: {save_path}")
     else:
         print("Creating dataset with the following parameters:")
         print(f"Number of samples: {num_samples}")
@@ -723,7 +722,6 @@ def create_dataset(
         print(f"Chirality distance: {chirality_distance}")
         print(f"Species range: {species_range}")
         print(f"Noise: {noise}")
-        print(f"Save path: {save_path}")
 
     # Create
     data_list = []
@@ -734,11 +732,8 @@ def create_dataset(
         )
         # Append
         data_list.append(data)
-    # Save
-    if os.path.dirname(save_path):  # Check if there is a directory in the path
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    torch.save(data_list, save_path)
-    print(f"Dataset saved as {save_path}")
+
+    return data_list
 
 
 def main():
@@ -758,15 +753,20 @@ def main():
 
     # Create
     print("Creating dataset...")
-    create_dataset(
+    dataset = create_dataset(
         num_samples=num_samples,
         type=type,
         chirality_distance=chirality_distance,
         species_range=species_range,
         points=points,
-        save_path=save_path,
         noise=noise,
     )
+
+    # Save
+    if os.path.dirname(save_path):  # Check if there is a directory in the path
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    torch.save(dataset, save_path)
+    print(f"Dataset saved as {save_path}")
     print("Dataset created.")
 
 

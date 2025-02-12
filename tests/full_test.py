@@ -10,10 +10,9 @@ from torch_geometric.loader import DataLoader
 from e3nn import o3
 
 # Custom
-import chi_geometry
-from chi_geometry.dataset import load_dataset_json, create_dataset
-from chi_geometry.model import Network, load_model_json, train
-from chi_geometry.model.train import (
+from chi_geometry import load_dataset_json, create_dataset
+from examples.model import Network, load_model_json, train
+from examples.model.train import (
     test as model_test,
 )  # Necessary to avoid pytest thinking this function is a test
 
@@ -105,17 +104,23 @@ def test_run_model(ctype, distance, noise):
     )
 
     # Create or load dataset
-    if not os.path.exists(dataset_args["save_path"]):
-        create_dataset(
+    if not os.path.exists(save_path):
+        dataset = create_dataset(
             num_samples=dataset_args["num_samples"],
             type=ctype,
             chirality_distance=distance,
             species_range=dataset_args["species_range"],
             points=dataset_args["points"],
-            save_path=save_path,
             noise=noise,
         )
-    dataset = torch.load(save_path, weights_only=False)
+        if os.path.dirname(save_path):  # Check if there is a directory in the path
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        torch.save(dataset, save_path)
+        print(f"Dataset saved as {save_path}")
+    else:
+        dataset = torch.load(save_path, weights_only=False)
+        print(f"Dataset loaded from {save_path}")
+    print(f"Dataset contains {len(dataset)} graphs.")
 
     # Run model
     run_model(dataset, model_args)
