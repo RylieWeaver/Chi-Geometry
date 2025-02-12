@@ -2,9 +2,9 @@
 Chi-Geometry: A library for generating geometric chiral datasets.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Modules
 from . import dataset
-from . import model
-__all__ = ["dataset", "model"]
+
+__all__ = ["dataset"]

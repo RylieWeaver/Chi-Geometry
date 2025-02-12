@@ -10,6 +10,7 @@ from torch_geometric.loader import DataLoader
 from e3nn import o3
 
 # Custom
+import chi_geometry
 from chi_geometry.dataset import load_dataset_json, create_dataset
 from chi_geometry.model import Network, load_model_json, train
 from chi_geometry.model.train import (

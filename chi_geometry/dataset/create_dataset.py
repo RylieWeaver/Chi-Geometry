@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch_geometric.data import Data
 
 # Chi-Geometry
+import chi_geometry
 from chi_geometry.dataset import load_dataset_json, center_and_rotate_positions
 
 

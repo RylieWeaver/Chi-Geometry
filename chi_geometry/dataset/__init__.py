@@ -20,4 +20,5 @@ __all__ = [
     "check_classic_configurations",
     "check_simple_configurations",
     "check_crossed_configurations",
+    "plot_graph",
 ]

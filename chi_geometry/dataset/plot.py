@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
 # Custom
+import chi_geometry
 from chi_geometry.dataset import load_dataset_json
 
 

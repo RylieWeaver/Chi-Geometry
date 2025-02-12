@@ -141,7 +141,7 @@ class Convolution(torch.nn.Module):
 
         edge_features = self.tp(x[edge_src], edge_attr, weight)
         x = scatter(edge_features, edge_dst, dim_size=x.shape[0]).div(
-            self.num_neighbors ** 0.5
+            self.num_neighbors**0.5
         )
 
         x = self.lin2(x, node_attr)
@@ -380,7 +380,7 @@ class Network(torch.nn.Module):
             number=self.number_of_basis,
             basis="gaussian",
             cutoff=False,
-        ).mul(self.number_of_basis ** 0.5)
+        ).mul(self.number_of_basis**0.5)
         edge_attr = smooth_cutoff(edge_length / self.max_radius)[:, None] * edge_sh
 
         if self.input_has_node_in and "atomic_numbers_one_hot" in data:

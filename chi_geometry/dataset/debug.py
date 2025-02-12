@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 # Chi-Geometry
+import chi_geometry
 from chi_geometry.dataset import create_chiral_instance, scalar_triple_product
 
 
