@@ -9,6 +9,7 @@ from .debug import (
     check_simple_configurations,
     check_crossed_configurations,
 )
+from .plot import plot_graph
 
 __all__ = [
     "load_dataset_json",
