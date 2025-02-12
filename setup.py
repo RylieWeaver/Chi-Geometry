@@ -7,7 +7,7 @@ setup(
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="Rylie Weaver",
-    author_email="your_email@example.com",
+    author_email="rylieweaver9@example.com",
     url="https://github.com/RylieWeaver/Chi-Geometry",
     license="MIT",
     packages=find_packages(),
