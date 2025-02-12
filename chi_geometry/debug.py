@@ -21,7 +21,7 @@ def check_classic_configurations(num_samples=100, species_range=15, dist_range=9
 
         for _ in range(num_samples):
             data = create_chiral_instance(
-                type=ctype,
+                chirality_type=ctype,
                 chirality_distance=dist,
                 species_range=species_range,
                 points=4,
@@ -88,7 +88,7 @@ def check_simple_configurations(num_samples=100, species_range=15, dist_range=9)
 
         for _ in range(num_samples):
             data = create_chiral_instance(
-                type=ctype,
+                chirality_type=ctype,
                 chirality_distance=dist,
                 species_range=species_range,
                 points=4,
@@ -156,7 +156,7 @@ def check_crossed_configurations(num_samples=100, species_range=15, dist_range=9
 
         for _ in range(num_samples):
             data = create_chiral_instance(
-                type=ctype,
+                chirality_type=ctype,
                 chirality_distance=dist,
                 species_range=species_range,
                 points=4,

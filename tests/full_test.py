@@ -107,7 +107,7 @@ def test_run_model(ctype, distance, noise):
     if not os.path.exists(save_path):
         dataset = create_dataset(
             num_samples=dataset_args["num_samples"],
-            type=ctype,
+            chirality_type=ctype,
             chirality_distance=distance,
             species_range=dataset_args["species_range"],
             points=dataset_args["points"],

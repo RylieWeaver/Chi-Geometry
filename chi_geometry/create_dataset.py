@@ -670,39 +670,43 @@ def create_pure_chiral_instance(points=4, species_range=10):
 
 
 def create_chiral_instance(
-    type="simple", chirality_distance=1, species_range=15, points=4, noise=False
+    chirality_type="simple",
+    chirality_distance=1,
+    species_range=15,
+    points=4,
+    noise=False,
 ):
     assert (
         species_range <= 118
     ), "Species range must be less than or equal to 118 (number of elements in the periodic table)"
 
-    if type == "classic":
+    if chirality_type == "classic":
         return create_classic_chiral_instance(
             chirality_distance=chirality_distance,
             species_range=species_range,
             noise=noise,
         )
-    elif type == "simple":
+    elif chirality_type == "simple":
         return create_simple_chiral_instance(
             chirality_distance=chirality_distance,
             species_range=species_range,
             noise=noise,
         )
-    elif type == "crossed":
+    elif chirality_type == "crossed":
         return create_crossed_chiral_instance(
             chirality_distance=chirality_distance,
             species_range=species_range,
             noise=noise,
         )
-    elif type == "pure":
+    elif chirality_type == "pure":
         return create_pure_chiral_instance(points=points, species_range=species_range)
     else:
-        raise ValueError(f"Chiral type not supported: {type}")
+        raise ValueError(f"Chiral type not supported: {chirality_type}")
 
 
 def create_dataset(
     num_samples=3000,
-    type="simple",
+    chirality_type="simple",
     chirality_distance=1,
     species_range=10,
     points=4,
@@ -712,13 +716,13 @@ def create_dataset(
     if type == "pure":
         print("Creating dataset with the following parameters:")
         print(f"Number of samples: {num_samples}")
-        print(f"Type: {type}")
+        print(f"Chirality Type: {chirality_type}")
         print(f"Species range: {species_range}")
         print(f"Points: {points}")
     else:
         print("Creating dataset with the following parameters:")
         print(f"Number of samples: {num_samples}")
-        print(f"Type: {type}")
+        print(f"Chirality Type: {chirality_type}")
         print(f"Chirality distance: {chirality_distance}")
         print(f"Species range: {species_range}")
         print(f"Noise: {noise}")
@@ -728,7 +732,7 @@ def create_dataset(
     for _ in range(num_samples):
         # Generate chiral graph
         data = create_chiral_instance(
-            type, chirality_distance, species_range, points, noise
+            chirality_type, chirality_distance, species_range, points, noise
         )
         # Append
         data_list.append(data)
@@ -744,7 +748,7 @@ def main():
 
     # Extract arguments
     num_samples = args["num_samples"]
-    type = args["type"]
+    chirality_type = args["chirality_type"]
     chirality_distance = args["chirality_distance"]
     species_range = args["species_range"]
     points = args["points"]
@@ -755,7 +759,7 @@ def main():
     print("Creating dataset...")
     dataset = create_dataset(
         num_samples=num_samples,
-        type=type,
+        chirality_type=chirality_type,
         chirality_distance=chirality_distance,
         species_range=species_range,
         points=points,

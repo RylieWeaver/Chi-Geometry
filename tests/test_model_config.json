@@ -7,5 +7,5 @@
     "hidden_dim": 8,
     "output_dim": 4,
     "layers": 4,
-    "class_weights": [1.0, 10.0, 10.0],
+    "class_weights": [1.0, 10.0, 10.0]
 }
