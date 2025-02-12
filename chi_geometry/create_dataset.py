@@ -546,134 +546,10 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
     return data
 
 
-# NOTE Pure chiral configurations based on point clouds and all quadruplets
-def create_pure_chiral_instance(points=4, species_range=10):
-    ######## Pure Chiral Configuration Point Clouds ########
-    """
-    Pure Chiral Configuration Point Cloud does not dictate what is a chiral center or what has an edge.
-    Instead, it generates a point cloud with the specified number of points and species range.
-    The chirality target looks at the handedness of all triplets of points connected to each node.
-    """
-
-    # Step 0: Assert necessary conditions
-    assert (
-        points == 4 or points == 5
-    ), "Pure chiral configuration point clouds currently only support 4 or 5 points"
-    assert species_range >= 1, "Species range must be at least 1"
-
-    # Step 1: Choose random atomic numbers with replacement
-    atomic_numbers = random.choices(range(1, species_range + 1), k=points)
-    atomic_numbers = np.array(atomic_numbers)
-    atomic_numbers.sort()
-
-    # Step 2: Assign positions randomly between -1 and 1 in 3D space
-    positions = np.random.uniform(-1, 1, size=(points, 3))
-
-    # Step 3: For each node, create all triplets involving that node
-    chirality = []
-    chirality_tags = []
-    chirality_strs = []
-
-    for node in range(points):
-        # Get all other nodes
-        other_nodes = [i for i in range(points) if i != node]
-        # Generate all combinations of two other nodes
-        triplets = list(combinations(other_nodes, 3))
-
-        # List to store chirality for the current node
-        node_chirality = []
-        node_chirality_tags = []
-        node_chirality_strs = []
-
-        for triplet in triplets:
-            triplet = list(triplet)
-            # Get atomic numbers
-            quadruplet = [node] + triplet
-            quadruplet_atomic_numbers = atomic_numbers[quadruplet]
-
-            # Check for unique atomic numbers. If there are repeats, this will not
-            # be a chiral configuration
-            if len(set(quadruplet_atomic_numbers)) < 4:
-                # Not all atomic numbers are unique; assign 'N/A'
-                chiral_value = 0
-                chiral_tag = [1, 0, 0]  # N/A
-                chiral_str = "N/A"
-            else:
-                # Proceed with chirality computation
-                # NOTE atomic numbers are already sorted in ascending order and combinations
-                # are generated in lexical order, so we don't need to sort the atomic numbers
-
-                # Compute vectors relative to the first point in the triplet
-                # Use Cahn-Ingold-Prelog rules to determine order
-                v1 = positions[triplet[2]] - positions[node]
-                v2 = positions[triplet[1]] - positions[node]
-                v3 = positions[triplet[0]] - positions[node]
-
-                # Compute scalar triple product
-                stp = np.dot(v1, np.cross(v2, v3))
-
-                # Determine chirality based on the sign of the scalar triple product
-                if stp > 0:
-                    chiral_value = 1
-                    chiral_tag = [0, 1, 0]  # R
-                    chiral_str = "R"
-                elif stp < 0:
-                    chiral_value = 2
-                    chiral_tag = [0, 0, 1]  # S
-                    chiral_str = "S"
-                else:
-                    chiral_value = 0
-                    chiral_tag = [1, 0, 0]  # N/A
-                    chiral_str = "N/A"
-
-            node_chirality.append(chiral_value)
-            node_chirality_tags.append(chiral_tag)
-            node_chirality_strs.append(chiral_str)
-
-        chirality.append(node_chirality)
-        chirality_tags.append(node_chirality_tags)
-        chirality_strs.append(node_chirality_strs)
-    # Make tensors
-    chirality = torch.tensor(chirality, dtype=torch.float)
-    chirality_tags = torch.tensor(chirality_tags, dtype=torch.float)
-
-    # Step 4: Create node features
-    atomic_numbers_tensor = torch.tensor(atomic_numbers, dtype=torch.int64).view(-1, 1)
-    atomic_numbers_one_hot = F.one_hot(
-        atomic_numbers_tensor.squeeze() - 1, num_classes=118
-    ).float()
-
-    # Step 5: Create positions tensor
-    positions = torch.tensor(positions, dtype=torch.float)
-
-    # NOTE: Edge index is not defined for point clouds
-    edge_index = None
-
-    # Step 6: Apply centering and random rotation to positions
-    positions = center_and_rotate_positions(positions)
-
-    # Step 7: Create the Data object
-    data = Data(
-        x=atomic_numbers_one_hot.float(),
-        y=chirality,
-        z=atomic_numbers_tensor.float(),
-        atomic_numbers=atomic_numbers_tensor,
-        atomic_numbers_one_hot=atomic_numbers_one_hot,
-        chirality=chirality,
-        chirality_one_hot=chirality_tags,
-        chirality_str=chirality_strs,
-        edge_index=edge_index,
-        pos=positions,
-    )
-
-    return data
-
-
 def create_chiral_instance(
     chirality_type="simple",
     chirality_distance=1,
     species_range=15,
-    points=4,
     noise=False,
 ):
     assert (
@@ -698,8 +574,6 @@ def create_chiral_instance(
             species_range=species_range,
             noise=noise,
         )
-    elif chirality_type == "pure":
-        return create_pure_chiral_instance(points=points, species_range=species_range)
     else:
         raise ValueError(f"Chiral type not supported: {chirality_type}")
 
@@ -709,30 +583,22 @@ def create_dataset(
     chirality_type="simple",
     chirality_distance=1,
     species_range=10,
-    points=4,
     noise=False,
 ):
     # Communication
-    if type == "pure":
-        print("Creating dataset with the following parameters:")
-        print(f"Number of samples: {num_samples}")
-        print(f"Chirality Type: {chirality_type}")
-        print(f"Species range: {species_range}")
-        print(f"Points: {points}")
-    else:
-        print("Creating dataset with the following parameters:")
-        print(f"Number of samples: {num_samples}")
-        print(f"Chirality Type: {chirality_type}")
-        print(f"Chirality distance: {chirality_distance}")
-        print(f"Species range: {species_range}")
-        print(f"Noise: {noise}")
+    print("Creating dataset with the following parameters:")
+    print(f"Number of samples: {num_samples}")
+    print(f"Chirality Type: {chirality_type}")
+    print(f"Chirality distance: {chirality_distance}")
+    print(f"Species range: {species_range}")
+    print(f"Noise: {noise}")
 
     # Create
     data_list = []
     for _ in range(num_samples):
         # Generate chiral graph
         data = create_chiral_instance(
-            chirality_type, chirality_distance, species_range, points, noise
+            chirality_type, chirality_distance, species_range, noise
         )
         # Append
         data_list.append(data)
