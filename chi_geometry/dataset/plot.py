@@ -13,11 +13,8 @@ from matplotlib.colors import Normalize
 from chi_geometry.dataset import load_dataset_json
 
 
-def plot_graph(dataset_path="dataset.pt", cmap="viridis"):
+def plot_graph(graph, cmap="viridis"):
     # Some Favorite Color Maps: 'viridis', 'Spectral'
-    # Load dataset and select the first molecule/graph
-    dataset = torch.load(dataset_path)
-    graph = dataset[0]
 
     # Get node positions and atomic numbers
     positions = graph.pos.numpy()
@@ -74,8 +71,12 @@ def main():
     config_path = os.path.join(script_dir, "config.json")
     args = load_dataset_json(config_path)
 
+    # Load dataset and select the first molecule/graph
+    dataset = torch.load(dataset_path=args["save_path"])
+    graph = dataset[0]
+
     # Plot
-    plot_graph(dataset_path=args["save_path"], cmap=args["cmap"])
+    plot_graph(graph, cmap=args["cmap"])
 
 
 if __name__ == "__main__":

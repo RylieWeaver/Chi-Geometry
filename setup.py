@@ -17,10 +17,7 @@ setup(
         "scipy>=1.5.0",
         "torch>=2.0.0",
         "torch_geometric>=2.0.0",
-        "torch_scatter>=2.0.0",
-        "tqdm",
         "matplotlib>=3.6.0",
-        "e3nn>=0.5.3",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
