@@ -22,13 +22,13 @@ def create_all_datasets(distances, config_path, datadir="datasets"):
         # Deterministic dataset
         dataset = create_dataset(
             num_samples=num_samples,
-            type=dataset_args["type"],
+            chirality_type=dataset_args["chirality_type"],
             chirality_distance=dist,
             species_range=dataset_args["species_range"],
             noise=False,
         )
         # Save
-        save_path=os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
+        save_path = os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
         if os.path.dirname(save_path):  # Check if there is a directory in the path
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
         torch.save(dataset, save_path)
@@ -42,13 +42,13 @@ def create_all_datasets(distances, config_path, datadir="datasets"):
         # Noisy dataset
         dataset = create_dataset(
             num_samples=num_samples,
-            type=dataset_args["type"],
+            chirality_type=dataset_args["chirality_type"],
             chirality_distance=dist,
             species_range=dataset_args["species_range"],
             noise=True,
         )
         # Save
-        save_path=os.path.join(f"{datadir}/noise-{dist}-distance/dataset.pt")
+        save_path = os.path.join(f"{datadir}/noise-{dist}-distance/dataset.pt")
         if os.path.dirname(save_path):  # Check if there is a directory in the path
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
         torch.save(dataset, save_path)
