@@ -104,7 +104,7 @@ def main():
     # create_all_datasets(distances, dataset_config_path)
 
     # Args
-    model_config_path = os.path.join(script_dir, "model_config.json")
+    model_config_path = os.path.join(script_dir, "e3nn_global_model_config.json")
     model_args = load_model_json(model_config_path)
     noise = True
     datadir = "datasets"

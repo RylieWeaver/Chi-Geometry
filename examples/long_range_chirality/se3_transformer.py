@@ -16,13 +16,14 @@ def main():
     # Setup
     script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
     distances = [1]
+    repetitions = 10
 
     # Create datasets
     # dataset_config_path = os.path.join(script_dir, "dataset_config.json")
     # create_all_datasets(distances, dataset_config_path)
 
     # Args
-    model_config_path = os.path.join(script_dir, "model_config.json")
+    model_config_path = os.path.join(script_dir, "se3_transformer_model_config.json")
     model_args = load_model_json(model_config_path)
     noise = True
     datadir = "datasets"
@@ -30,7 +31,7 @@ def main():
         "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
     )
 
-    # Train model on each dataset
+    # Train models on each dataset
     for dist in distances:
         # Dataset
         if noise:
@@ -41,23 +42,28 @@ def main():
         dataset = make_global_connections(dataset)
         print(f"Dataset contains {len(dataset)} graphs.")
 
-        # Model
-        modelname = f"se(3)_transformer"
-        if noise:
-            log_dir = f"logs/noise-{dist}-distance-{modelname}"
-        else:
-            log_dir = f"logs/{dist}-distance-{modelname}"
-        model_args["layers"] = (
-            4  # 4 is enough to propagate chirality information with global connections
-        )
-        model = WrappedEquiformer(
-            input_dim=model_args["input_dim"],
-            hidden_dim=model_args["hidden_dim"],
-            layers=model_args["layers"],
-            num_classes=model_args["num_classes"],
-        ).to(device)
-        print(f"Training model for distance {dist}...")
-        train_val_test_model(model, model_args, dataset, dist, log_dir)
+        # Train repeated models to avg accuracy
+        for repetition in range(repetitions):
+            # Model
+            modelname = f"se3_transformer"
+            if noise:
+                log_dir = (
+                    f"logs/noise-{dist}-distance-{modelname}-repetition-{repetition+1}"
+                )
+            else:
+                log_dir = f"logs/{dist}-distance-{modelname}-repetition-{repetition+1}"
+            model_args["layers"] = (
+                4  # 4 is enough to propagate chirality information with global connections
+            )
+            model = WrappedEquiformer(
+                input_dim=model_args["input_dim"],
+                hidden_dim=model_args["hidden_dim"],
+                layers=model_args["layers"],
+                num_classes=model_args["num_classes"],
+            ).to(device)
+            print(f"Training model for distance {dist}...")
+            train_val_test_model(model, model_args, dataset, dist, log_dir)
+            print(f"Training complete for repetition {repetition+1}\n")
 
     print("Experiment complete.")
 
