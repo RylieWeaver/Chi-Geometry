@@ -8,9 +8,12 @@ import torch
 from matplotlib import cm
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
+from matplotlib.ticker import MultipleLocator
 
 # Custom
 from chi_geometry import load_dataset_json
+
+# NOTE I've changed some stuff in the plotting to make figures nicely in this branch
 
 
 def plot_graph(graph, cmap="viridis"):
@@ -31,6 +34,9 @@ def plot_graph(graph, cmap="viridis"):
     ax.set_box_aspect([1, 1, 1])
     # ax.set_axis_off()  # Hide axes
 
+    # Mirror
+    # positions = positions[[0,1,2,4,3], :]
+
     # Plot nodes with colors corresponding to atomic numbers
     for pos, color in zip(positions, colors):
         ax.scatter(*pos, color=color, s=100, edgecolors="k", alpha=0.9)
@@ -44,10 +50,40 @@ def plot_graph(graph, cmap="viridis"):
             end_pos = positions[end]
             ax.plot(*zip(start_pos, end_pos), color="gray", alpha=0.7)
 
+    # -----------------------
+    # Node labeling
+    # -----------------------
+    # First node is labeled "c"
+    labels = [None] * 5
+    labels[0] = "c"
+
+    # Sort the other 4 by descending atomic_number and label them "1", "2", "3", "4"
+    remaining_indices = [1, 2, 3, 4]
+    sorted_indices = sorted(
+        remaining_indices, key=lambda i: atomic_numbers[i], reverse=True
+    )
+    for rank, idx in enumerate(sorted_indices, start=1):
+        labels[idx] = str(rank)
+
+    # Place labels near each node
+    for i, (x, y, z) in enumerate(positions):
+        ax.text(
+            x + 0.05,
+            y + 0.05,
+            z + 0.05,
+            labels[i],
+            color="black",
+            fontsize=10,
+            zorder=5,
+        )
+
     # Set plot parameters
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
+    ax.xaxis.set_major_locator(MultipleLocator(0.4))
+    ax.yaxis.set_major_locator(MultipleLocator(0.4))
+    ax.zaxis.set_major_locator(MultipleLocator(0.2))
     plt.title(
         f"Graph Visualization | Chiral Center has Label: {graph.chirality_str[0][0]}"
     )
