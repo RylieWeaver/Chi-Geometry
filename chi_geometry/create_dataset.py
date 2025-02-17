@@ -181,7 +181,7 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
     ).float()  # Subtract 1 because atomic numbers start from 1
 
     # Step 11: Apply centering and random rotation to positions
-    # positions = center_and_rotate_positions(positions)
+    positions = center_and_rotate_positions(positions)
 
     # Step 12: Construct PyTorch Geometric data object
     data = Data(
