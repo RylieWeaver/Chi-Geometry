@@ -617,7 +617,6 @@ def main():
     chirality_type = args["chirality_type"]
     chirality_distance = args["chirality_distance"]
     species_range = args["species_range"]
-    points = args["points"]
     save_path = args["save_path"]
     noise = args["noise"]
 
@@ -628,7 +627,6 @@ def main():
         chirality_type=chirality_type,
         chirality_distance=chirality_distance,
         species_range=species_range,
-        points=points,
         noise=noise,
     )
 
