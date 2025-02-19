@@ -23,7 +23,7 @@ chirality_distance = 1
 species_range = 15
 noise = False
 dataset = create_dataset(
-    num_samples, chirality_type, chirality_distance, species_range, points, noise
+    num_samples, chirality_type, chirality_distance, species_range, noise
 )
 
 # 3. Visualize dataset (optional)
