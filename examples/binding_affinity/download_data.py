@@ -22,10 +22,6 @@ urls = {
     "test": "https://figshare.com/ndownloader/files/30975682?private_link=e23be65a884ce7fc8543",
 }
 
-# Define folder to store downloaded data
-dataset_dir = "./datasets"
-os.makedirs(dataset_dir, exist_ok=True)
-
 
 # Function to download a file
 def download_file(url, filename):
@@ -93,18 +89,10 @@ def mol_to_pyg_data(row, mol):
 
 
 # Function to process the downloaded pickle files and convert to PyTorch Geometric dataset
-def process_and_save(split):
-    pickle_file = f"{dataset_dir}/{split}.pickle"
-    with open(pickle_file, "rb") as f:
-        data_df = pickle.load(f)
-
+def process(df, split):
     data_list = []
-    data_df = data_df.sample(frac=1.0).reset_index(
-        drop=True
-    )  # Shuffle and subset the data
-    # data_df = data_df[:3000]
     for idx, row in tqdm(
-        data_df.iterrows(), total=len(data_df), desc=f"Processing {split} dataset"
+        df.iterrows(), total=len(df), desc=f"Processing {split} dataset"
     ):
         smiles = row["ID"]
         mol = Chem.MolFromSmiles(smiles)
@@ -118,18 +106,42 @@ def process_and_save(split):
             except Exception as e:
                 print(f"Skipping molecule {smiles} due to error: {e}")
 
-    # Save the processed dataset
-    torch.save(data_list, f"{dataset_dir}/{split}.pt")
+    return data_list
+
+
+# Define a helper function to keep only largest molecules
+def keep_largest(dataset, num_samples=10000):
+    # Sort by number of nodes (descending), then slice the first num_samples
+    dataset_sorted = sorted(dataset, key=lambda data: data.num_nodes, reverse=True)
+    return dataset_sorted[:num_samples]
 
 
 def main():
+    # Arguments
+    datadir = "./datasets"
+    os.makedirs(datadir, exist_ok=True)
+    num_samples_map = {"train": 8000, "val": 1000, "test": 1000}
+
     # Download datasets
     for split, url in urls.items():
-        download_file(url, f"{dataset_dir}/{split}.pickle")
+        download_file(url, f"{datadir}/{split}.pickle")
 
     # Process and save datasets
     for split in ["train", "val", "test"]:
-        process_and_save(split)
+        # Load split
+        pickle_file = f"{datadir}/{split}.pickle"
+        with open(pickle_file, "rb") as f:
+            df = pickle.load(f)
+
+        # Whole dataset
+        dataset = process(df, split)
+        torch.save(dataset, f"{datadir}/{split}.pt")
+        # Sample
+        sample = dataset[: num_samples_map[split]]
+        torch.save(sample, f"{datadir}/{split}_sample.pt")
+        # Keep graphs with the most nodes
+        largest = keep_largest(dataset, num_samples_map[split])
+        torch.save(largest, f"{datadir}/{split}_largest.pt")
 
 
 if __name__ == "__main__":
