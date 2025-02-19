@@ -10,7 +10,7 @@ from torch_geometric.loader import DataLoader
 from e3nn import o3
 
 # Custom imports
-from examples.model import Network, load_model_json, process_batch
+from examples.utils import Network, load_model_json, process_batch
 
 
 ###############################################################################

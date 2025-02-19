@@ -1,8 +1,6 @@
 # General
 import os
 import json
-from typing import Dict, Optional
-import networkx as nx
 
 # Torch
 import torch
@@ -11,7 +9,7 @@ import torch
 from chi_geometry import load_dataset_json, create_dataset
 
 
-def create_all_datasets(distances, config_path, datadir="datasets"):
+def create_hop_distance_datasets(distances, config_path, datadir="datasets"):
     # Read Config
     dataset_args = load_dataset_json(config_path)
     num_samples = dataset_args["num_samples"]
@@ -58,21 +56,3 @@ def create_all_datasets(distances, config_path, datadir="datasets"):
             os.path.join(f"{datadir}/noise-{dist}-distance/dataset_config.json"), "w"
         ) as f:
             json.dump(dataset_args, f)
-
-
-def make_global_connections(dataset):
-    for data in dataset:
-        num_nodes = data.num_nodes
-        edge_pairs = []
-
-        # Get global connections
-        for i in range(num_nodes):
-            for j in range(num_nodes):
-                if i != j:
-                    edge_pairs.append([i, j])
-
-        # Overwrite
-        edge_index = torch.tensor(edge_pairs, dtype=torch.long).t().contiguous()
-        data.edge_index = edge_index
-
-    return dataset

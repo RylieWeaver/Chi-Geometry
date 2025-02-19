@@ -9,9 +9,8 @@ import torch
 from e3nn import o3
 
 # Chi-Geometry
-from examples.model import Network, load_model_json
-from experiment_utils.utils import create_all_datasets
-from experiment_utils.train_val_test import train_val_test_model
+from examples.utils import Network, load_model_json, train_val_test_model_classification
+from experiment_utils.utils import create_hop_distance_datasets
 
 
 def main():
@@ -21,7 +20,7 @@ def main():
 
     # Create datasets
     # dataset_config_path = os.path.join(script_dir, "dataset_config.json")
-    # create_all_datasets(distances, dataset_config_path)
+    # create_hop_distance_datasets(distances, dataset_config_path)
 
     # Args
     model_config_path = os.path.join(script_dir, "e3nn_local_model_config.json")
@@ -62,22 +61,18 @@ def main():
             number_of_basis=model_args["number_of_basis"],
             radial_layers=model_args["radial_layers"],
             radial_neurons=model_args["radial_neurons"],
-            num_neighbors=model_args["num_neighbors"],
-            num_nodes=model_args["num_nodes"],
-            reduce_output=model_args["reduce_output"],
-            num_classes=model_args["num_classes"],
-            num_heads=model_args["num_heads"],
+            output_dim=model_args["output_dim"],
         ).to(device)
         print(f"Training model for distance {dist}...")
-        train_val_test_model(model, model_args, dataset, dist, log_dir)
+        # Higher distances will have a lower proportion of chiral centers, so we weight chiral classifications at higher distances more
+        num_classes = model_args["num_classes"]
+        shift_weights = [0.0] + [num_classes * dist] * (num_classes - 1)
+        class_weights = list(map(sum, zip(model_args["class_weights"], shift_weights)))
+        class_weights = torch.tensor(class_weights, device=device)
+        train_val_test_model_classification(model, model_args, dataset, log_dir)
 
     print("Experiment complete.")
 
 
 if __name__ == "__main__":
     main()
-
-
-# To-Do in main:
-# 1. Create dataset directories
-# 2. num_heads in train/test

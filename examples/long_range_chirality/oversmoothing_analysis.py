@@ -6,13 +6,12 @@ import functools
 import torch
 import torch.nn.functional as F
 from torch_geometric.loader import DataLoader
-from collections import deque
 
 # E3NN
 from e3nn import o3
 
 # Custom
-from examples.model import Network, load_model_json, process_batch
+from examples.utils import Network, load_model_json, process_batch
 
 
 ###############################################################################

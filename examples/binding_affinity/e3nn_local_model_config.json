@@ -5,7 +5,7 @@
     "use_cuda": true,
     "input_dim": 40,
     "hidden_dim": 20,
-    "output_dim": 3,
+    "output_dim": 1,
     "layers": 4,
-    "class_weights": [1.0, 10.0, 10.0]
+    "class_weights": [1.0, 20.0, 20.0]
 }

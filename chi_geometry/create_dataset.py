@@ -165,7 +165,7 @@ def create_classic_chiral_instance(chirality_distance=1, species_range=10, noise
     chirality = [chirality_value] + [0] * (4 * chirality_distance)
     chirality_tags = [chirality_tag] + [[1, 0, 0]] * (4 * chirality_distance)
     chirality_strs = [chirality_str] + ["N/A"] * (4 * chirality_distance)
-    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
+    chirality = torch.tensor(chirality, dtype=torch.long).unsqueeze(-1)
     chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
 
     # Step 10: Create node features and make sure they're tensors
@@ -338,7 +338,7 @@ def create_simple_chiral_instance(chirality_distance=1, species_range=10, noise=
     chirality = [chirality_value] + [0] * (3 * chirality_distance)
     chirality_tags = [chirality_tag] + [[1, 0, 0]] * (3 * chirality_distance)
     chirality_strs = [[chirality_str] + ["N/A"] * (3 * chirality_distance)]
-    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
+    chirality = torch.tensor(chirality, dtype=torch.long).unsqueeze(-1)
     chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
 
     # Step 10: Create node features and make sure they're tensors
@@ -512,7 +512,7 @@ def create_crossed_chiral_instance(chirality_distance=1, species_range=10, noise
     chirality = [chirality_value] + [0] * (3 * chirality_distance)
     chirality_tags = [chirality_tag] + [[1, 0, 0]] * (3 * chirality_distance)
     chirality_strs = [chirality_str] + ["N/A"] * (3 * chirality_distance)
-    chirality = torch.tensor(chirality, dtype=torch.float).unsqueeze(-1)
+    chirality = torch.tensor(chirality, dtype=torch.long).unsqueeze(-1)
     chirality_one_hot = torch.tensor(chirality_tags, dtype=torch.float)
 
     # Step 10: Create node features and make sure they're tensors

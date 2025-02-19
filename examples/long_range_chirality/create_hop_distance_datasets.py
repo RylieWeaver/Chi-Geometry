@@ -1,8 +1,8 @@
 # General
 import os
 
-# Custom
-from experiment_utils.utils import create_all_datasets
+# Chi-Geometry
+from experiment_utils.utils import create_hop_distance_datasets
 
 
 def main():
@@ -12,7 +12,7 @@ def main():
 
     # Create datasets
     dataset_config_path = os.path.join(script_dir, "dataset_config.json")
-    create_all_datasets(distances, dataset_config_path)
+    create_hop_distance_datasets(distances, dataset_config_path)
 
 
 if __name__ == "__main__":
