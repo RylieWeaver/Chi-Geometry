@@ -1,11 +1,10 @@
 {
-    "epochs": 150,
+    "epochs": 500,
     "batch_size": 32,
     "lr": 0.0003,
     "use_cuda": true,
     "input_dim": 40,
     "hidden_dim": 20,
     "output_dim": 1,
-    "layers": 4,
-    "class_weights": [1.0, 10.0, 10.0]
+    "layers": 4
 }

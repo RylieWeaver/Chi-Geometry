@@ -1,6 +1,5 @@
 # General
 import os
-import datetime
 
 # Torch
 import torch
@@ -8,74 +7,62 @@ import torch
 # Chi-Geometry
 from examples.utils import (
     load_model_json,
+    WrappedModel,
     Equiformer,
+    train_val_test_model_regression,
     make_global_connections,
-    train_val_test_model_classification,
 )
-from experiment_utils.utils import create_hop_distance_datasets
 
 
 def main():
     # Setup
     script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-    distances = [1]
     repetitions = 10
 
-    # Create datasets
-    # dataset_config_path = os.path.join(script_dir, "dataset_config.json")
-    # create_hop_distance_datasets(distances, dataset_config_path)
-
     # Args
-    model_config_path = os.path.join(script_dir, "se3_transformer_model_config.json")
+    model_config_path = os.path.join(script_dir, "e3nn_local_model_config.json")
     model_args = load_model_json(model_config_path)
-    noise = True
     datadir = "datasets"
     device = torch.device(
         "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
     )
 
-    # Train models on each dataset
-    for dist in distances:
-        # Dataset
-        if noise:
-            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/dataset.pt")
-        else:
-            dataset_path = os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
-        dataset = torch.load(dataset_path)
-        dataset = make_global_connections(dataset)
-        print(f"Dataset contains {len(dataset)} graphs.")
+    # Load Data
+    train_dataset = torch.load(os.path.join(f"{datadir}/train_largest.pt"))
+    val_dataset = torch.load(os.path.join(f"{datadir}/val_largest.pt"))
+    test_dataset = torch.load(os.path.join(f"{datadir}/test_largest.pt"))
+    print(
+        f"Datasets Loaded with Train: {len(train_dataset)}, "
+        f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"
+    )
 
-        # Higher distances will have a lower proportion of chiral centers, so we weight chiral classifications at higher distances more
-        num_classes = model_args["num_classes"]
-        shift_weights = [0.0] + [num_classes * dist] * (num_classes - 1)
-        class_weights = list(map(sum, zip(model_args["class_weights"], shift_weights)))
-        class_weights = torch.tensor(class_weights, device=device)
-        print(f"Training models for distance {dist}...")
+    # Feature Engineering
+    for dataset in [train_dataset, val_dataset, test_dataset]:
+        dataset = make_global_connections(
+            dataset
+        )  # Adding these original connectivity features with global connection should allow the model to learn the chiral information.
 
-        # Train repeated models to avg accuracy
-        for repetition in range(repetitions):
-            # Model
-            modelname = f"se3_transformer"
-            if noise:
-                log_dir = (
-                    f"logs/noise-{dist}-distance-{modelname}-repetition-{repetition+1}"
-                )
-            else:
-                log_dir = f"logs/{dist}-distance-{modelname}-repetition-{repetition+1}"
-            model_args["layers"] = (
-                4  # 4 is enough to propagate chirality information with global connections
-            )
-            model = Equiformer(
-                input_dim=model_args["input_dim"],
-                hidden_dim=model_args["hidden_dim"],
-                layers=model_args["layers"],
-                output_dim=model_args["output_dim"],
-            ).to(device)
-            train_val_test_model_classification(
-                model, model_args, dataset, dist, log_dir
-            )
-            print(f"Training complete for repetition {repetition+1}\n")
-
+    # Multiple repetitions
+    for repetition in range(repetitions):
+        # Args
+        modelname = f"se3_transformer"
+        model_args["max_radius"] = 20.0
+        log_dir = f"logs/{modelname}_{repetition+1}"
+        # Model
+        base = Equiformer(
+            input_dim=model_args["input_dim"],
+            hidden_dim=model_args["hidden_dim"],
+            layers=model_args["layers"],
+            output_dim=model_args["hidden_dim"],
+        ).to(device)
+        model = WrappedModel(
+            base, model_args["hidden_dim"], model_args["output_dim"]
+        ).to(device)
+        # Training
+        print(f"Training model for repetition {repetition+1}...")
+        train_val_test_model_regression(
+            model, model_args, train_dataset, val_dataset, test_dataset, log_dir
+        )
     print("Experiment complete.")
 
 
