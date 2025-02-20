@@ -20,7 +20,7 @@ def main():
     repetitions = 10
 
     # Args
-    model_config_path = os.path.join(script_dir, "e3nn_local_model_config.json")
+    model_config_path = os.path.join(script_dir, "se3_transformer_model_config.json")
     model_args = load_model_json(model_config_path)
     datadir = "datasets"
     device = torch.device(
@@ -47,7 +47,7 @@ def main():
         # Args
         modelname = f"se3_transformer"
         model_args["max_radius"] = 20.0
-        log_dir = f"logs/{modelname}_{repetition+1}"
+        log_dir = f"logs/{modelname}_repetition_{repetition+1}"
         # Model
         base = Equiformer(
             input_dim=model_args["input_dim"],

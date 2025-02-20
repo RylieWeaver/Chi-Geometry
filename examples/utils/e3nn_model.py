@@ -65,6 +65,9 @@ class Convolution(torch.nn.Module):
 
     radial_neurons : int
         number of neurons in the hidden layers of the radial fully connected network
+
+    avg_degree : float
+        typical number of nodes convolved over
     """
 
     def __init__(
@@ -76,12 +79,14 @@ class Convolution(torch.nn.Module):
         number_of_basis,
         radial_layers,
         radial_neurons,
+        avg_degree,
     ) -> None:
         super().__init__()
         self.irreps_in = o3.Irreps(irreps_in)
         self.irreps_node_attr = o3.Irreps(irreps_node_attr)
         self.irreps_edge_attr = o3.Irreps(irreps_edge_attr)
         self.irreps_out = o3.Irreps(irreps_out)
+        self.avg_degree = avg_degree
 
         self.sc = FullyConnectedTensorProduct(
             self.irreps_in, self.irreps_node_attr, self.irreps_out
@@ -137,7 +142,12 @@ class Convolution(torch.nn.Module):
         x = self.lin1(x, node_attr)
 
         edge_features = self.tp(x[edge_src], edge_attr, weight)
-        x = scatter(edge_features, edge_dst, dim_size=x.shape[0])
+        # x = torch.tanh(scatter(edge_features, edge_dst, dim_size=x.shape[0]))
+        # aggregated = scatter(edge_features, edge_dst, dim_size=x.shape[0])
+        # x = torch.sign(aggregated) * torch.log1p(torch.abs(aggregated))
+        x = scatter(edge_features, edge_dst, dim_size=x.shape[0]).div(
+            self.avg_degree ** 0.5
+        )
 
         x = self.lin2(x, node_attr)
 
@@ -222,6 +232,9 @@ class Network(torch.nn.Module):
 
     radial_neurons : int
         number of neurons in the hidden layers of the radial fully connected network
+
+    avg_degree : float
+        typical number of nodes convolved over
     """
 
     def __init__(
@@ -236,12 +249,14 @@ class Network(torch.nn.Module):
         number_of_basis: int,
         radial_layers: int,
         radial_neurons: int,
+        avg_degree: int,
         output_dim: int = 3,
     ) -> None:
         super().__init__()
         self.max_radius = max_radius
         self.eps = 1e-9
         self.number_of_basis = number_of_basis
+        self.avg_degree = avg_degree
         self.output_dim = output_dim
 
         self.irreps_in = o3.Irreps(irreps_in) if irreps_in is not None else None
@@ -305,6 +320,7 @@ class Network(torch.nn.Module):
                 number_of_basis,
                 radial_layers,
                 radial_neurons,
+                avg_degree,
             )
             irreps = gate.irreps_out
             self.layers.append(Compose(conv, gate))
@@ -318,6 +334,7 @@ class Network(torch.nn.Module):
                 number_of_basis,
                 radial_layers,
                 radial_neurons,
+                avg_degree,
             )
         )
 
@@ -362,7 +379,7 @@ class Network(torch.nn.Module):
             number=self.number_of_basis,
             basis="gaussian",
             cutoff=False,
-        ).mul(self.number_of_basis**0.5)
+        ).mul(self.number_of_basis ** 0.5)
         edge_attr = smooth_cutoff(edge_length / self.max_radius)[:, None] * edge_sh
 
         if self.input_has_node_in and "atomic_numbers_one_hot" in data:
@@ -439,6 +456,9 @@ class CustomNetwork(torch.nn.Module):
 
     radial_neurons : int
         number of neurons in the hidden layers of the radial fully connected network
+
+    avg_degree : float
+        typical number of nodes convolved over
     """
 
     def __init__(
@@ -453,6 +473,7 @@ class CustomNetwork(torch.nn.Module):
         number_of_basis: int,
         radial_layers: int,
         radial_neurons: int,
+        avg_degree: int,
         output_dim: int = 3,
     ) -> None:
         super().__init__()
@@ -528,6 +549,7 @@ class CustomNetwork(torch.nn.Module):
                 number_of_basis,
                 radial_layers,
                 radial_neurons,
+                avg_degree,
             )
             irreps = gate.irreps_out
             self.layers.append(Compose(conv, gate))
@@ -541,6 +563,7 @@ class CustomNetwork(torch.nn.Module):
                 number_of_basis,
                 radial_layers,
                 radial_neurons,
+                avg_degree,
             )
         )
 
@@ -585,7 +608,7 @@ class CustomNetwork(torch.nn.Module):
             number=self.number_of_basis,
             basis="gaussian",
             cutoff=False,
-        ).mul(self.number_of_basis**0.5)
+        ).mul(self.number_of_basis ** 0.5)
         edge_attr = smooth_cutoff(edge_length / self.max_radius)[:, None] * edge_sh
         full_edge_attr = torch.cat([data.edge_attr, edge_attr], dim=-1)
 

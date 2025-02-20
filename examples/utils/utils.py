@@ -5,6 +5,7 @@ import networkx as nx
 # Torch
 import torch
 from torch_scatter import scatter
+from torch_geometric.utils import degree
 
 
 def load_model_json(file_path):
@@ -165,25 +166,32 @@ def global_connect_feat_eng(dataset, undirected=True):
     return dataset
 
 
-# class WrappedModel(torch.nn.Module):
-#     def __init__(self, model, input_dim, output_dim):
-#         super().__init__()
-#         self.model = model
-#         self.out_embed = torch.nn.Linear(
-#             self.hidden_dim, self.output_dim
-#         )
+def get_avg_degree(dataset):
+    total_degree = 0
+    total_nodes = 0
+    for data in dataset:
+        deg = degree(data.edge_index[0], data.num_nodes)  # per-node degrees
+        total_degree += deg.sum().item()
+        total_nodes += data.num_nodes
 
-#     def forward(self, data):
-#         return self.out_embed(self.model(data))
+    return total_degree / total_nodes if total_nodes > 0 else 1.0
+
+
+def get_avg_nodes(dataset):
+    total_nodes = 0
+    for data in dataset:
+        total_nodes += data.num_nodes
+    return total_nodes / len(dataset) if len(dataset) > 0 else 1.0
 
 
 class WrappedModel(torch.nn.Module):
-    def __init__(self, base, input_dim, output_dim):
+    def __init__(self, base, input_dim, output_dim, avg_nodes=5):
         super().__init__()
         self.base = base
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.embedding = torch.nn.Linear(5 * input_dim, output_dim)
+        self.avg_nodes = avg_nodes
 
     def forward(self, data):
         # Base network
@@ -196,9 +204,11 @@ class WrappedModel(torch.nn.Module):
         x_max = scatter(x, data.batch, dim=0, reduce="max")
 
         # manual std
-        mean_val_sq = scatter(x**2, data.batch, dim=0, reduce="mean")
-        std_val = (mean_val_sq - x_mean**2).clamp_min(1e-5).sqrt()
-        x = torch.cat([x_sum, x_mean, x_min, x_max, std_val], dim=1)
+        mean_val_sq = scatter(x ** 2, data.batch, dim=0, reduce="mean")
+        std_val = (mean_val_sq - x_mean ** 2).clamp_min(1e-9).sqrt()
+        x = torch.cat(
+            [x_sum.div(self.avg_nodes ** 0.5), x_mean, x_min, x_max, std_val], dim=1
+        )
 
         return self.embedding(x)
 

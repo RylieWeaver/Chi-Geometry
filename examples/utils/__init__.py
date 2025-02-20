@@ -7,6 +7,8 @@ from .utils import (
     create_irreps_string,
     make_global_connections,
     global_connect_feat_eng,
+    get_avg_degree,
+    get_avg_nodes,
 )
 from .train_utils import (
     train,

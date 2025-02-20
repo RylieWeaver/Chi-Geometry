@@ -5,6 +5,6 @@
     "use_cuda": true,
     "input_dim": 40,
     "hidden_dim": 20,
-    "output_dim": 3,
+    "output_dim": 1,
     "layers": 4
 }

@@ -5,7 +5,7 @@ import torch
 import torch.nn.utils.rnn as rnn_utils
 
 # Equivariant Neural Networks
-from equiformer_pytorch import Equiformer
+from equiformer_pytorch import Equiformer as OpenSourceEquiformer
 
 
 ############################################################################################################
@@ -37,7 +37,7 @@ class Equiformer(torch.nn.Module):
         #  - degree-0 dimension = hidden_dim
         #  - degree-1 dimension = hidden_dim//2
         #  - degree-2 dimension = hidden_dim//8
-        self.equiformer = Equiformer(
+        self.equiformer = OpenSourceEquiformer(
             dim=(self.hidden_dim, self.hidden_dim // 2, self.hidden_dim // 8),
             num_degrees=3,  # l=0,1,2
             depth=self.layers,
