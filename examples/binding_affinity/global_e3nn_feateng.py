@@ -1,5 +1,7 @@
 # General
 import os
+import random
+import numpy as np
 
 # Torch
 import torch
@@ -55,6 +57,13 @@ def main():
 
     # Multiple repetitions
     for repetition in range(repetitions):
+        # Set randomness
+        seed = 42 + repetition
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
         # Args
         modelname = f"global_e3nn_feateng"
         model_args["max_radius"] = 20.0
