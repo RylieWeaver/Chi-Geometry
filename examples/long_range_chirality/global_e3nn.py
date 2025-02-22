@@ -56,11 +56,11 @@ def main():
             f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"
         )
 
-        # Feature Engineering
-        for dataset in [train_dataset, val_dataset, test_dataset]:
-            dataset = global_connect_feat_eng(
-                dataset
-            )  # Adding these original connectivity features with global connection should allow the model to learn the chiral information.
+    # Global connections
+    for dataset in [train_dataset, val_dataset, test_dataset]:
+        dataset = make_global_connections(
+            dataset
+        )  # Adding these original connectivity features with global connection should allow the model to learn the chiral information.
 
         # Get statistics
         avg_degree = get_avg_degree(train_dataset)

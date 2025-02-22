@@ -43,7 +43,7 @@ def main():
         f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"
     )
 
-    # Feature Engineering
+    # Global connections
     for dataset in [train_dataset, val_dataset, test_dataset]:
         dataset = make_global_connections(
             dataset
