@@ -42,7 +42,7 @@ def compute_dirichlet_energy(embs: torch.Tensor, edge_index: torch.Tensor) -> fl
     # Differences for each edge => shape [2E, D] (double edges in edge_index)
     diffs = embs[i] - embs[j]
     # L2 squared => shape [E]
-    sq_dists = (diffs**2).sum(dim=-1) / 2  # Divide by 2 to avoid double counting
+    sq_dists = (diffs ** 2).sum(dim=-1) / 2  # Divide by 2 to avoid double counting
 
     v = embs.size(0)  # number of nodes
     sum_sq = sq_dists.sum()

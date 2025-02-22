@@ -1,6 +1,7 @@
 # General
 import os
-import datetime
+import random
+import numpy as np
 
 # Torch
 import torch
@@ -13,7 +14,10 @@ from examples.utils import (
     Network,
     load_model_json,
     train_val_test_model_classification,
+    shuffle_split_dataset,
     make_global_connections,
+    get_avg_degree,
+    get_avg_nodes,
 )
 from experiment_utils.utils import create_hop_distance_datasets
 
@@ -41,22 +45,43 @@ def main():
     for dist in distances:
         # Dataset
         if noise:
-            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/dataset.pt")
+            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/")
         else:
-            dataset_path = os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
-        dataset = torch.load(dataset_path)
-        dataset = make_global_connections(dataset)
-        print(f"Dataset contains {len(dataset)} graphs.")
+            dataset_path = os.path.join(f"{datadir}/{dist}-distance/")
+        train_dataset = torch.load(os.path.join(f"{dataset_path}/train.pt"))
+        val_dataset = torch.load(os.path.join(f"{dataset_path}/val.pt"))
+        test_dataset = torch.load(os.path.join(f"{dataset_path}/test.pt"))
+        print(
+            f"Datasets Loaded with Train: {len(train_dataset)}, "
+            f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"
+        )
+
+        # Feature Engineering
+        for dataset in [train_dataset, val_dataset, test_dataset]:
+            dataset = global_connect_feat_eng(
+                dataset
+            )  # Adding these original connectivity features with global connection should allow the model to learn the chiral information.
+
+        # Get statistics
+        avg_degree = get_avg_degree(train_dataset)
 
         # Higher distances will have a lower proportion of chiral centers, so we weight chiral classifications at higher distances more
         num_classes = model_args["output_dim"]
         shift_weights = [0.0] + [num_classes * dist] * (num_classes - 1)
-        class_weights = list(map(sum, zip(model_args["class_weights"], shift_weights)))
-        class_weights = torch.tensor(class_weights, device=device)
+        model_args["class_weights"] = list(
+            map(sum, zip(model_args["class_weights"], shift_weights))
+        )
         print(f"Training models for distance {dist}...")
 
         # Train repeated models to avg accuracy
         for repetition in range(repetitions):
+            # Set randomness
+            seed = 42 + repetition
+            random.seed(seed)
+            np.random.seed(seed)
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+
             # Model
             modelname = f"global_e3nn"
             if noise:
@@ -65,9 +90,9 @@ def main():
                 )
             else:
                 log_dir = f"logs/{dist}-distance-{modelname}-repetition-{repetition+1}"
-            model_args["layers"] = (
-                4  # 4 is enough to propagate chirality information with global connections
-            )
+            model_args[
+                "layers"
+            ] = 4  # 4 is enough to propagate chirality information with global connections
             model = Network(
                 irreps_in=o3.Irreps(model_args["irreps_in"]),
                 irreps_hidden=o3.Irreps(model_args["irreps_hidden"]),
@@ -79,9 +104,12 @@ def main():
                 number_of_basis=model_args["number_of_basis"],
                 radial_layers=model_args["radial_layers"],
                 radial_neurons=model_args["radial_neurons"],
+                avg_degree=avg_degree,
                 output_dim=model_args["output_dim"],
             ).to(device)
-            train_val_test_model_classification(model, model_args, dataset, log_dir)
+            train_val_test_model_classification(
+                model, model_args, train_dataset, val_dataset, test_dataset, log_dir
+            )
             print(f"Training complete for repetition {repetition+1}.")
 
     print("Experiment complete.")

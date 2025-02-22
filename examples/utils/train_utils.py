@@ -18,8 +18,8 @@ def train(model, loader, optimizer, criterion, device):
         data = process_batch(data)
 
         # Compute loss
-        pred = model(data)  # Shape: [num_nodes, output_dim]
-        true = data.y.view(-1, 1)  # Shape: [num_nodes, *]
+        pred = model(data).squeeze()  # Shape: [num_nodes] or [num_nodes, output_dim]
+        true = data.y.squeeze()  # Shape: [num_nodes] or [num_nodes, output_dim]
         loss = criterion(pred, true)
         total_loss += (
             loss.item() * data.num_graphs
@@ -47,7 +47,7 @@ def test_classification(model, loader, criterion, device, num_classes):
 
             # Compute loss and accuracy
             pred = model(data)  # Shape: [num_nodes, num_classes]
-            true = data.y.squeeze()  # Shape: [num_nodes, 1]
+            true = data.y.squeeze()  # Shape: [num_nodes]
             loss = criterion(pred, true)
             total_loss += (
                 loss.item() * data.num_graphs

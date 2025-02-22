@@ -54,7 +54,9 @@ def train_val_test_model_classification(
     # Define loss
     num_classes = model_args["output_dim"]
     criterion = torch.nn.CrossEntropyLoss(
-        weight=torch.tensor(model_args["class_weights"], dtype=torch.float32)
+        weight=torch.tensor(
+            model_args["class_weights"], dtype=torch.float32, device=device
+        )
     )
 
     # -- Training loop with logging --

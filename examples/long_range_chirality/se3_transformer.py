@@ -1,6 +1,7 @@
 # General
 import os
-import datetime
+import random
+import numpy as np
 
 # Torch
 import torch
@@ -11,6 +12,7 @@ from examples.utils import (
     Equiformer,
     make_global_connections,
     train_val_test_model_classification,
+    shuffle_split_dataset,
 )
 from experiment_utils.utils import create_hop_distance_datasets
 
@@ -36,20 +38,38 @@ def main():
 
     # Train models on each dataset
     for dist in distances:
+        # Set randomness
+        seed = 42 + dist
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
         # Dataset
         if noise:
-            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/dataset.pt")
+            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/")
         else:
-            dataset_path = os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
-        dataset = torch.load(dataset_path)
-        dataset = make_global_connections(dataset)
-        print(f"Dataset contains {len(dataset)} graphs.")
+            dataset_path = os.path.join(f"{datadir}/{dist}-distance/")
+        train_dataset = torch.load(os.path.join(f"{dataset_path}/train.pt"))
+        val_dataset = torch.load(os.path.join(f"{dataset_path}/val.pt"))
+        test_dataset = torch.load(os.path.join(f"{dataset_path}/test.pt"))
+        print(
+            f"Datasets Loaded with Train: {len(train_dataset)}, "
+            f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"
+        )
+
+        # Feature Engineering
+        for dataset in [train_dataset, val_dataset, test_dataset]:
+            dataset = global_connect_feat_eng(
+                dataset
+            )  # Adding these original connectivity features with global connection should allow the model to learn the chiral information.
 
         # Higher distances will have a lower proportion of chiral centers, so we weight chiral classifications at higher distances more
-        num_classes = model_args["num_classes"]
+        num_classes = model_args["output_dim"]
         shift_weights = [0.0] + [num_classes * dist] * (num_classes - 1)
-        class_weights = list(map(sum, zip(model_args["class_weights"], shift_weights)))
-        class_weights = torch.tensor(class_weights, device=device)
+        model_args["class_weights"] = list(
+            map(sum, zip(model_args["class_weights"], shift_weights))
+        )
         print(f"Training models for distance {dist}...")
 
         # Train repeated models to avg accuracy
@@ -62,9 +82,9 @@ def main():
                 )
             else:
                 log_dir = f"logs/{dist}-distance-{modelname}-repetition-{repetition+1}"
-            model_args["layers"] = (
-                4  # 4 is enough to propagate chirality information with global connections
-            )
+            model_args[
+                "layers"
+            ] = 4  # 4 is enough to propagate chirality information with global connections
             model = Equiformer(
                 input_dim=model_args["input_dim"],
                 hidden_dim=model_args["hidden_dim"],
@@ -72,7 +92,7 @@ def main():
                 output_dim=model_args["output_dim"],
             ).to(device)
             train_val_test_model_classification(
-                model, model_args, dataset, dist, log_dir
+                model, model_args, train_dataset, val_dataset, test_dataset, log_dir
             )
             print(f"Training complete for repetition {repetition+1}\n")
 
