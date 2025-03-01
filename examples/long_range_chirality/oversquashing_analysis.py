@@ -10,7 +10,13 @@ from torch_geometric.loader import DataLoader
 from e3nn import o3
 
 # Custom imports
-from examples.utils import Network, load_model_json, process_batch
+from examples.utils import (
+    Network,
+    load_model_json,
+    process_batch,
+    get_avg_degree,
+)
+from experiment_utils.utils import create_hop_distance_datasets
 
 
 ###############################################################################
@@ -65,8 +71,8 @@ def gradient_test_chiral_center(model, data, chiral_idx, device):
     out = model(data)[0]  # shape [num_nodes, num_classes], from your script
 
     # The label for the chiral node (assume data.y[chiral_idx] is valid)
-    chiral_label = data.y[chiral_idx].long()  # shape []
-    chiral_logit = out[chiral_idx].unsqueeze(0)  # shape [1, num_classes]
+    chiral_label = data.y[chiral_idx].long().squeeze()  # shape []
+    chiral_logit = out  # shape [1, num_classes]
 
     criterion = torch.nn.CrossEntropyLoss()
     loss_chiral = criterion(chiral_logit, chiral_label)
@@ -201,7 +207,7 @@ def main():
     # Args
     model_config_path = os.path.join(script_dir, "model_config.json")
     model_args = load_model_json(model_config_path)
-    noise = False
+    noise = True
     datadir = "datasets"
     device = torch.device(
         "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
@@ -211,11 +217,19 @@ def main():
     for dist in distances:
         # Dataset
         if noise:
-            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/dataset.pt")
+            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/")
         else:
-            dataset_path = os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
-        dataset = torch.load(dataset_path)
-        print(f"Dataset contains {len(dataset)} graphs.")
+            dataset_path = os.path.join(f"{datadir}/{dist}-distance/")
+        train_dataset = torch.load(os.path.join(f"{dataset_path}/train.pt"))
+        val_dataset = torch.load(os.path.join(f"{dataset_path}/val.pt"))
+        test_dataset = torch.load(os.path.join(f"{dataset_path}/test.pt"))
+        print(
+            f"Datasets Loaded with Train: {len(train_dataset)}, "
+            f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"
+        )
+
+        # Get statistics
+        avg_degree = get_avg_degree(train_dataset)
 
         # Model
         modelname = f"local_e3nn"
@@ -237,16 +251,13 @@ def main():
             number_of_basis=model_args["number_of_basis"],
             radial_layers=model_args["radial_layers"],
             radial_neurons=model_args["radial_neurons"],
-            num_neighbors=model_args["num_neighbors"],
-            num_nodes=model_args["num_nodes"],
-            reduce_output=model_args["reduce_output"],
-            num_classes=model_args["num_classes"],
-            num_heads=model_args["num_heads"],
+            avg_degree=avg_degree,
+            output_dim=model_args["output_dim"],
         ).to(device)
         model.load_state_dict(torch.load(f"{log_dir}/best_model.pt"))
         model.eval()
-        print(f"Training model for distance {dist}...")
-        oversquashing_analysis(model, dataset, dist, log_dir, device=device)
+        print(f"Testing oversquashing on model for distance {dist}...")
+        oversquashing_analysis(model, test_dataset, dist, log_dir, device=device)
 
     print("Experiment complete.")
 
@@ -258,7 +269,19 @@ if __name__ == "__main__":
 ###############################################################################
 # 5) Notes
 ###############################################################################
-# Oversquashing metrics (grad of node features) (normalized):
+# Oversquashing metrics (grad of node features) (normalized) (with noise):
+#  - distance=1:  0.5179
+#  - distance=2:  0.2460
+#  - distance=3:  0.1522
+#  - distance=4:  0.1742
+#  - distance=5:  0.1789
+#  - distance=6:  nan
+#  - distance=7:  nan
+#  - distance=8:  nan
+#  - distance=9:  nan
+
+
+# Oversquashing metrics (grad of node features) (normalized) (no noise):
 #  - distance=1:  0.5498
 #  - distance=2:  0.5772
 #  - distance=3:  0.0512

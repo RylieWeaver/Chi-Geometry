@@ -14,6 +14,12 @@ from torch_geometric.data import Data
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
+# Chi-Geometry
+from examples.utils import (
+    get_avg_degree,
+    get_avg_nodes,
+)
+
 
 # Define dataset download URLs
 urls = {
@@ -134,14 +140,33 @@ def main():
             df = pickle.load(f)
 
         # Whole dataset
-        dataset = process(df, split)
-        torch.save(dataset, f"{datadir}/{split}.pt")
+        # dataset = process(df, split)
+        # torch.save(dataset, f"{datadir}/{split}.pt")
+        dataset = torch.load(f"{datadir}/{split}.pt")
+
         # Sample
         sample = dataset[: num_samples_map[split]]
         torch.save(sample, f"{datadir}/{split}_sample.pt")
+
         # Keep graphs with the most nodes
         largest = keep_largest(dataset, num_samples_map[split])
         torch.save(largest, f"{datadir}/{split}_largest.pt")
+
+        # Compute and save stats for each dataset
+        for name, subset in [
+            ("full", dataset),
+            ("sample", sample),
+            ("largest", largest),
+        ]:
+            avg_deg = get_avg_degree(subset)
+            avg_nodes = get_avg_nodes(subset)
+            stats = {"avg_degree": avg_deg, "avg_nodes": avg_nodes}
+
+            # Save stats to JSON
+            stats_filename = f"{split}_{name}_stats.json"  # e.g., train_full_stats.json
+            stats_path = os.path.join(datadir, stats_filename)
+            with open(stats_path, "w") as f_stats:
+                json.dump(stats, f_stats, indent=2)
 
 
 if __name__ == "__main__":

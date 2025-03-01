@@ -12,7 +12,6 @@ from examples.utils import (
     Equiformer,
     make_global_connections,
     train_val_test_model_classification,
-    shuffle_split_dataset,
 )
 from experiment_utils.utils import create_hop_distance_datasets
 

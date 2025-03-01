@@ -11,7 +11,13 @@ from torch_geometric.loader import DataLoader
 from e3nn import o3
 
 # Custom
-from examples.utils import Network, load_model_json, process_batch
+from examples.utils import (
+    Network,
+    load_model_json,
+    process_batch,
+    get_avg_degree,
+)
+from experiment_utils.utils import create_hop_distance_datasets
 
 
 ###############################################################################
@@ -212,7 +218,7 @@ def main():
     # Args
     model_config_path = os.path.join(script_dir, "model_config.json")
     model_args = load_model_json(model_config_path)
-    noise = False
+    noise = True
     datadir = "datasets"
     device = torch.device(
         "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
@@ -222,11 +228,19 @@ def main():
     for dist in distances:
         # Dataset
         if noise:
-            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/dataset.pt")
+            dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/")
         else:
-            dataset_path = os.path.join(f"{datadir}/{dist}-distance/dataset.pt")
-        dataset = torch.load(dataset_path)
-        print(f"Dataset contains {len(dataset)} graphs.")
+            dataset_path = os.path.join(f"{datadir}/{dist}-distance/")
+        train_dataset = torch.load(os.path.join(f"{dataset_path}/train.pt"))
+        val_dataset = torch.load(os.path.join(f"{dataset_path}/val.pt"))
+        test_dataset = torch.load(os.path.join(f"{dataset_path}/test.pt"))
+        print(
+            f"Datasets Loaded with Train: {len(train_dataset)}, "
+            f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"
+        )
+
+        # Get statistics
+        avg_degree = get_avg_degree(train_dataset)
 
         # Model
         modelname = f"local_e3nn"
@@ -248,16 +262,13 @@ def main():
             number_of_basis=model_args["number_of_basis"],
             radial_layers=model_args["radial_layers"],
             radial_neurons=model_args["radial_neurons"],
-            num_neighbors=model_args["num_neighbors"],
-            num_nodes=model_args["num_nodes"],
-            reduce_output=model_args["reduce_output"],
-            num_classes=model_args["num_classes"],
-            num_heads=model_args["num_heads"],
+            avg_degree=avg_degree,
+            output_dim=model_args["output_dim"],
         ).to(device)
         model.load_state_dict(torch.load(f"{log_dir}/best_model.pt"))
         model.eval()
-        print(f"Training model for distance {dist}...")
-        analyze_oversmoothing(model, dataset, dist, log_dir, device)
+        print(f"Testing oversmoothing on model for distance {dist}...")
+        analyze_oversmoothing(model, test_dataset, dist, log_dir, device)
 
     print("Experiment complete.")
 
@@ -269,7 +280,20 @@ if __name__ == "__main__":
 ###############################################################################
 # 7) Notes
 ###############################################################################
-# Epochs to converge to perfect accuracy on train/val/test by distance:
+# Epochs to converge on train/val/test by distance when
+# running with noise (500 epochs and 75 early stopping):
+#  - distance=1:  152 epochs
+#  - distance=2:  226 epochs
+#  - distance=3:  233 epochs
+#  - distance=4:  319 epochs
+#  - distance=5:  331 epochs
+#  - distance=6:  N/A  (early stopped at 121 epochs) (extremely high loss)
+#  - distance=7:  N/A  (early stopped at 114 epochs) (extremely high loss)
+#  - distance=8:  N/A  (early stopped at 93 epochs)  (nans in loss)
+#  - distance=9:  N/A  (early stopped at 100 epochs) (nans in loss)
+
+# Epochs to converge to perfect accuracy on train/val/test by distance when
+# running with no noise (500 epochs and 75 early stopping):
 #  - distance=1:  32 epochs
 #  - distance=2:  77 epochs
 #  - distance=3:  261 epochs
@@ -279,6 +303,5 @@ if __name__ == "__main__":
 #  - distance=7:  N/A  (early stopped at 76 epochs)
 #  - distance=8:  N/A  (early stopped at 76 epochs)
 #  - distance=9:  N/A  (early stopped at 75 epochs) (nans in loss)
-# 500 epochs and 75 early stopping
 
 # Did not find any clear oversmoothing trends dirichlet energy and weak evidence in other metrics.
