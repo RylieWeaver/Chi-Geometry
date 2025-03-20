@@ -1,5 +1,6 @@
 from .e3nn_model import Network, CustomNetwork
 from .equiformer import Equiformer
+from .dimenet import DimeNetPP
 from .utils import (
     WrappedModel,
     load_model_json,
