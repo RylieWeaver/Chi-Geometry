@@ -1,6 +1,7 @@
 # General
 import os
 import json
+import numpy as np
 
 # Torch
 import torch
@@ -98,13 +99,11 @@ def train_val_test_model_classification(
             print(f"Test Loss: {test_loss:.4f}, Test Acc:  [{test_acc_str}]")
 
             # Write to the training log file
-            avg_train_acc = sum(train_accuracies) / len(train_accuracies)
-            avg_val_acc = sum(val_accuracies) / len(val_accuracies)
-            avg_test_acc = sum(test_accuracies) / len(test_accuracies)
             log_file.write(
-                f"{epoch},{train_loss:.4f},{avg_train_acc:.4f},"
-                f"{val_loss:.4f},{avg_val_acc:.4f},"
-                f"{test_loss:.4f},{avg_test_acc:.4f}\n"
+                f"\nEpoch: {epoch:03d}, During Training Loss: {loss:.4f}\n"
+                f"Train Loss: {train_loss:.4f}, Train Acc: [{train_acc_str}]\n"
+                f"Val Loss: {val_loss:.4f},   Val Acc:   [{val_acc_str}]\n"
+                f"Test Loss: {test_loss:.4f}, Test Acc:  [{test_acc_str}]\n"
             )
             log_file.flush()  # ensure data is written immediately
 
@@ -112,7 +111,7 @@ def train_val_test_model_classification(
             scheduler.step(val_loss)
 
             # Early Stopping Logic
-            if val_loss < best_val_loss:
+            if val_loss+1e-9 < best_val_loss:
                 best_val_loss = val_loss
                 epochs_no_improve = 0
                 torch.save(

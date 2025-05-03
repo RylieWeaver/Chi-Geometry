@@ -11,6 +11,7 @@ from examples.utils import (
     DimeNetPP,
     load_model_json,
     train_val_test_model_classification,
+    get_max_distance,
 )
 from experiment_utils.utils import create_hop_distance_datasets
 
@@ -66,6 +67,9 @@ def main():
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
 
+            # Get statistics
+            max_radius = get_max_distance(train_dataset) * 1.01
+
             # Model
             modelname = f"dimenet"
             if noise:
@@ -82,6 +86,7 @@ def main():
                 hidden_dim=model_args["hidden_dim"],
                 layers=model_args["layers"],
                 output_dim=model_args["output_dim"],
+                max_radius=max_radius,
             ).to(device)
             train_val_test_model_classification(
                 model, model_args, train_dataset, val_dataset, test_dataset, log_dir

@@ -56,20 +56,19 @@ class DimeNetPP(nn.Module):
 
     def __init__(
         self,
-        input_dim: int = 40,  # 118 possible atomic numbers
+        input_dim: int = 40,
         hidden_dim: int = 20,
         layers: int = 4,
         output_dim: int = 3,
         max_radius: float = 5.0,
-        pos_model: bool = False,
     ):
         super().__init__()
         # Hyperparameters
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
+        self.layers = layers
         self.output_dim = output_dim
         self.max_radius = max_radius
-        self.pos_model = pos_model
         # Defaults that we just set for simplicity
         self.act = nn.SiLU()
         num_radial = 5

@@ -52,7 +52,7 @@ def create_hop_distance_datasets(distances, config_path, datadir="datasets"):
             json.dump(dataset_args, f)
 
         # Noisy dataset
-        dataset_args["noise"] = False
+        dataset_args["noise"] = True
         dataset = create_dataset(
             num_samples=num_samples,
             chirality_type=dataset_args["chirality_type"],

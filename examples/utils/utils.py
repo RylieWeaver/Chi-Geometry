@@ -1,5 +1,6 @@
 # General
 import json
+import math
 import networkx as nx
 
 # Torch
@@ -22,7 +23,6 @@ def load_model_json(file_path):
         "irreps_node_attr": "1x0e",
         "irreps_edge_attr": "1x0e + 1x1o",
         "layers": 4,
-        "max_radius": 2.0,
         "number_of_basis": 5,
         "radial_layers": 2,
         "radial_neurons": 50,
@@ -184,6 +184,50 @@ def get_avg_nodes(dataset):
     return total_nodes / len(dataset) if len(dataset) > 0 else 1.0
 
 
+def get_max_distance(dataset, eps=1e-6):
+    max_dist = eps
+    for data in dataset:
+        src, dst = data.edge_index
+        max_dist = max(max_dist, (data.pos[dst] - data.pos[src]).norm(dim=-1).max().item())
+    return max_dist
+
+
+def get_max_pos_norm(dataset, eps=1e-6):
+    max_norm = eps
+    for data in dataset:
+        norm = torch.norm(data.pos, dim=1)
+        max_norm = max(max_norm, norm.max().item())
+    return max_norm
+
+
+def get_atomic_number_stats(dataset):
+    # Initialize min and max with extreme values
+    max_atomic_number = -float('inf')
+    min_atomic_number = float('inf')
+    total_atomic_number = 0
+    total_nodes = 0
+
+    # First pass: compute total, min, and max atomic number across dataset
+    for data in dataset:
+        atomic_numbers = data.atomic_numbers  # assume this is a torch.Tensor
+        max_atomic_number = max(max_atomic_number, atomic_numbers.max().item())
+        min_atomic_number = min(min_atomic_number, atomic_numbers.min().item())
+        total_atomic_number += atomic_numbers.sum().item()
+        total_nodes += data.num_nodes
+
+    avg_atomic_number = total_atomic_number / total_nodes
+
+    # Second pass: compute the sum of squared differences from the mean
+    squared_diff = 0
+    for data in dataset:
+        atomic_numbers = data.atomic_numbers.float()  # convert to float for calculations
+        squared_diff += ((atomic_numbers - avg_atomic_number) ** 2).sum().item()
+
+    std_atomic_number = math.sqrt(squared_diff / total_nodes)
+
+    return max_atomic_number, min_atomic_number, avg_atomic_number, std_atomic_number
+
+
 class WrappedModel(torch.nn.Module):
     def __init__(self, base, input_dim, output_dim, avg_nodes=5):
         super().__init__()
@@ -211,17 +255,3 @@ class WrappedModel(torch.nn.Module):
         )
 
         return self.embedding(x)
-
-
-# Updates
-## Take num neighbors and num nodes out of e3nn model
-## Clamp distance in e3nn model
-## Take out num heads in framework
-## Consolidate training and models to work for classification and regression
-## Take out reduce output in e3nn model
-## Change class tags from float to long
-## Update training so no multihead
-## References to num_classes in the examples
-## Renamed from model to utils
-## Will need to fully rework imports and calls in simple, crossed, etc... examples
-## Changing the training function to take train/val/test instead of the whole dataset

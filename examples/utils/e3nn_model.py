@@ -17,7 +17,7 @@ import torch
 
 from e3nn import o3
 from e3nn.math import soft_one_hot_linspace
-from e3nn.nn import FullyConnectedNet, Gate
+from e3nn.nn import FullyConnectedNet, Gate, Activation
 from e3nn.o3 import FullyConnectedTensorProduct, TensorProduct
 from e3nn.util.jit import compile_mode
 
@@ -39,8 +39,6 @@ def scatter(src: torch.Tensor, index: torch.Tensor, dim_size: int) -> torch.Tens
 
 @compile_mode("script")
 class Convolution(torch.nn.Module):
-    # Removed the normalization by num neighbors / num nodes in aggregations.
-    # Calculating those statistics is costly for time and using them is not central to the study.
     r"""equivariant convolution
 
     Parameters
@@ -91,7 +89,6 @@ class Convolution(torch.nn.Module):
         self.sc = FullyConnectedTensorProduct(
             self.irreps_in, self.irreps_node_attr, self.irreps_out
         )
-
         self.lin1 = FullyConnectedTensorProduct(
             self.irreps_in, self.irreps_node_attr, self.irreps_in
         )
@@ -142,9 +139,6 @@ class Convolution(torch.nn.Module):
         x = self.lin1(x, node_attr)
 
         edge_features = self.tp(x[edge_src], edge_attr, weight)
-        # x = torch.tanh(scatter(edge_features, edge_dst, dim_size=x.shape[0]))
-        # aggregated = scatter(edge_features, edge_dst, dim_size=x.shape[0])
-        # x = torch.sign(aggregated) * torch.log1p(torch.abs(aggregated))
         x = scatter(edge_features, edge_dst, dim_size=x.shape[0]).div(
             self.avg_degree ** 0.5
         )
@@ -633,3 +627,463 @@ class CustomNetwork(torch.nn.Module):
             x = lay(x, z, edge_src, edge_dst, full_edge_attr, edge_length_embedded)
 
         return self.out_embed(x)
+    
+
+############################################################################################################
+
+class VirtualCompose(torch.nn.Module):
+    def __init__(self, first, second, third) -> None:
+        super().__init__()
+        self.first = first
+        self.second = second
+        self.third = third
+        self.virtual_irreps_in = self.first.virtual_irreps_in
+        self.node_irreps_in = self.first.node_irreps_in
+        self.irreps_out = [self.second.irreps_out, self.third.irreps_out]
+
+    def forward(self, *input):
+        x_virtual, x_node = self.first(*input)
+        return self.second(x_virtual), self.third(x_node)
+
+
+@compile_mode("script")
+class VirtualNodeConvolution(torch.nn.Module):
+    r"""equivariant convolution
+
+    Parameters
+    ----------
+    virtual_irreps_in : `e3nn.o3.Irreps`
+        representation of the input virtual node features
+
+    node_irreps_in : `e3nn.o3.Irreps`
+        representation of the input node features
+
+    virtual_irreps_out : `e3nn.o3.Irreps`
+        representation of the output virtual node features
+
+    node_irreps_out : `e3nn.o3.Irreps`
+        representation of the output node features
+
+    avg_degree : float
+        typical number of nodes convolved over
+
+    avg_nodes : float
+        typical number of nodes in the graph
+    """
+
+    def __init__(
+        self,
+        virtual_irreps_in,
+        node_irreps_in,
+        virtual_irreps_out,
+        node_irreps_out,
+        node_pos_irreps,
+        avg_nodes,
+    ) -> None:
+        super().__init__()
+        self.virtual_irreps_in = o3.Irreps(virtual_irreps_in)
+        self.node_irreps_in = o3.Irreps(node_irreps_in)
+        self.virtual_irreps_out = o3.Irreps(virtual_irreps_out)
+        self.node_irreps_out = o3.Irreps(node_irreps_out)
+        self.node_pos_irreps = o3.Irreps(node_pos_irreps)
+        self.avg_nodes = avg_nodes
+
+        # Projected skip connections
+        self.virtual_sc = o3.Linear(self.virtual_irreps_in, self.virtual_irreps_out)
+        self.node_sc = o3.Linear(self.node_irreps_in, self.node_irreps_out)
+
+        # Messages
+        self.v2n_tp = FullyConnectedTensorProduct(
+            self.node_irreps_in,
+            self.node_pos_irreps,
+            self.virtual_irreps_out,
+        )
+        self.n2v_lin = o3.Linear(self.virtual_irreps_out, self.node_irreps_out)
+
+        # Activation layers
+        ## Virtual
+        virtual_acts = []
+        for (mul, ir) in self.virtual_irreps_out:
+            if ir.l == 0:
+                # It's a scalar block
+                if ir.p == 1:
+                    # even scalar (0e)
+                    virtual_acts.append(torch.nn.SiLU())
+                elif ir.p == -1:
+                    # odd scalar (0o) – must use an odd function (like Tanh)
+                    virtual_acts.append(torch.nn.Tanh())
+                else:
+                    # p=0 is invalid for scalars in e3nn
+                    raise ValueError(f"Unexpected parity {ir.p} for scalar {ir}")
+            else:
+                # It's non-scalar (l>0): no direct activation
+                virtual_acts.append(None)
+        self.act_v = Activation(self.virtual_irreps_out, virtual_acts)
+        ## Node
+        node_acts = []
+        for (mul, ir) in self.node_irreps_out:
+            if ir.l == 0:
+                # It's a scalar block
+                if ir.p == 1:
+                    # even scalar (0e)
+                    node_acts.append(torch.nn.SiLU())  # or ReLU, etc.
+                elif ir.p == -1:
+                    # odd scalar (0o)
+                    node_acts.append(torch.nn.Tanh())  # Tanh is an odd function
+                else:
+                    raise ValueError(f"Unexpected parity {ir.p} for scalar {ir}")
+            else:
+                # It's non-scalar (l>0), no direct activation
+                node_acts.append(None)
+        self.act_n = Activation(self.node_irreps_out, node_acts)
+
+    def forward(
+        self, x_virtual, x_node, node_pos_sh, batch
+    ) -> torch.Tensor:
+        # Skip connections
+        s_virtual = self.virtual_sc(x_virtual)
+        s_node = self.node_sc(x_node)
+
+        # Update virtual with node features
+        ## Compute message
+        m_n2v = self.v2n_tp(x_node, node_pos_sh)
+        m_n2v = scatter(m_n2v, batch, dim_size=x_virtual.shape[0]).div(self.avg_nodes ** 0.5)
+        m_n2v = self.act_v(m_n2v)
+        ## Skip connection
+        x_virtual = (s_virtual + m_n2v) / (2 ** 0.5)
+
+        # Update node with virtual features
+        ## Compute messages
+        m_v2n = self.n2v_lin(x_virtual[batch])
+        m_v2n = self.act_n(m_v2n)
+        ## Skip connection
+        x_node = (s_node + m_v2n) / (2 ** 0.5)
+        
+        return x_virtual, x_node
+
+
+class VirtualNodeNetwork(torch.nn.Module):
+    r"""equivariant neural network
+
+    Parameters
+    ----------
+    irreps_in : `e3nn.o3.Irreps` or None
+        representation of the input features
+        can be set to ``None`` if nodes don't have input features
+
+    irreps_hidden : `e3nn.o3.Irreps`
+        representation of the hidden features
+
+    irreps_out : `e3nn.o3.Irreps`
+        representation of the output features
+
+    irreps_node_attr : `e3nn.o3.Irreps` or None
+        representation of the nodes attributes
+        can be set to ``None`` if nodes don't have attributes
+
+    irreps_edge_attr : `e3nn.o3.Irreps`
+        representation of the edge attributes
+        the edge attributes are :math:`h(r) Y(\vec r / r)`
+        where :math:`h` is a smooth function that goes to zero at ``max_radius``
+        and :math:`Y` are the spherical harmonics polynomials
+
+    layers : int
+        number of gates (non linearities)
+
+    max_radius : float
+        maximum radius for the convolution
+
+    number_of_basis : int
+        number of basis on which the edge length are projected
+
+    radial_layers : int
+        number of hidden layers in the radial fully connected network
+
+    radial_neurons : int
+        number of neurons in the hidden layers of the radial fully connected network
+
+    avg_degree : float
+        typical number of nodes convolved over
+    """
+
+    def __init__(
+        self,
+        irreps_in: Optional[o3.Irreps],
+        irreps_hidden: o3.Irreps,
+        irreps_out: o3.Irreps,
+        irreps_node_attr: o3.Irreps,
+        irreps_edge_attr: Optional[o3.Irreps],
+        layers: int,
+        max_radius: float,
+        number_of_basis: int,
+        radial_layers: int,
+        radial_neurons: int,
+        avg_degree: int,
+        avg_nodes: int,
+        max_pos_norm: float,
+        output_dim: int = 3,
+    ) -> None:
+        super().__init__()
+        self.max_radius = max_radius
+        self.eps = 1e-9
+        self.number_of_basis = number_of_basis
+        self.avg_degree = avg_degree
+        self.avg_nodes = avg_nodes
+        self.max_pos_norm = max_pos_norm
+        self.output_dim = output_dim
+
+        self.irreps_in = irreps_in
+        self.irreps_hidden = o3.Irreps(irreps_hidden)
+        self.irreps_out = o3.Irreps(irreps_out)
+        self.irreps_node_attr = (
+            o3.Irreps(irreps_node_attr)
+            if irreps_node_attr is not None
+            else o3.Irreps("0e")
+        )
+        self.irreps_edge_attr = o3.Irreps(irreps_edge_attr)
+        self.irreps_node_pos = o3.Irreps(irreps_edge_attr)
+
+        self.input_has_node_in = irreps_in is not None
+        self.input_has_node_attr = irreps_node_attr is not None
+
+        node_irreps = (self.irreps_in + self.irreps_node_pos)
+        virtual_irreps = node_irreps
+
+        act = {
+            1: torch.nn.functional.silu,
+            -1: torch.tanh,
+        }
+        act_gates = {
+            1: torch.sigmoid,
+            -1: torch.tanh,
+        }
+
+        self.one_hot_embedding = torch.nn.Linear(118, self.irreps_in.count((0, 1)))
+
+        self.layers = torch.nn.ModuleList()
+        self.global_layers = torch.nn.ModuleList()
+
+        for _ in range(layers):
+            # Global convolution
+            ## Virtual Gate
+            virtual_irreps_scalars = o3.Irreps(
+                [
+                    (mul, ir)
+                    for mul, ir in node_irreps
+                    if ir.l == 0 and tp_path_exists(virtual_irreps, node_irreps, ir)
+                ]
+            )
+            virtual_irreps_gated = o3.Irreps(
+                [
+                    (mul, ir)
+                    for mul, ir in node_irreps
+                    if ir.l > 0 and tp_path_exists(virtual_irreps, node_irreps, ir)
+                ]
+            )
+            virtual_ir = "0e" if tp_path_exists(virtual_irreps, node_irreps, "0e") else "0o"
+            virtual_irreps_gates = o3.Irreps([(mul, virtual_ir) for mul, _ in virtual_irreps_gated])
+            virtual_conv_gate = Gate(
+                virtual_irreps_scalars,
+                [act[ir.p] for _, ir in virtual_irreps_scalars],  # scalar
+                virtual_irreps_gates,
+                [act_gates[ir.p] for _, ir in virtual_irreps_gates],  # gates (scalars)
+                virtual_irreps_gated,  # gated tensors
+            )
+            ## Node Gate
+            node_irreps_scalars = o3.Irreps(
+                [
+                    (mul, ir)
+                    for mul, ir in node_irreps
+                    if ir.l == 0 and tp_path_exists(node_irreps, virtual_irreps, ir)
+                ]
+            )
+            node_irreps_gated = o3.Irreps(
+                [
+                    (mul, ir)
+                    for mul, ir in node_irreps
+                    if ir.l > 0 and tp_path_exists(node_irreps, virtual_irreps, ir)
+                ]
+            )
+            node_ir = "0e" if tp_path_exists(node_irreps, virtual_irreps, "0e") else "0o"
+            node_irreps_gates = o3.Irreps([(mul, node_ir) for mul, _ in node_irreps_gated])
+            node_conv_gate = Gate(
+                node_irreps_scalars,
+                [act[ir.p] for _, ir in node_irreps_scalars],  # scalar
+                node_irreps_gates,
+                [act_gates[ir.p] for _, ir in node_irreps_gates],  # gates (scalars)
+                node_irreps_gated,  # gated tensors
+            )
+            global_conv = VirtualNodeConvolution(
+                virtual_irreps,
+                node_irreps,
+                virtual_conv_gate.irreps_in,
+                node_conv_gate.irreps_in,
+                self.irreps_edge_attr,
+                avg_nodes,
+            )
+            virtual_irreps = virtual_conv_gate.irreps_out
+            node_irreps = node_conv_gate.irreps_out
+            self.global_layers.append(VirtualCompose(global_conv, virtual_conv_gate, node_conv_gate))
+
+            # Standard Convolution
+            irreps_scalars = o3.Irreps(
+                [
+                    (mul, ir)
+                    for mul, ir in self.irreps_hidden
+                    if ir.l == 0 and tp_path_exists(node_irreps, self.irreps_edge_attr, ir)
+                ]
+            )
+            irreps_gated = o3.Irreps(
+                [
+                    (mul, ir)
+                    for mul, ir in self.irreps_hidden
+                    if ir.l > 0 and tp_path_exists(node_irreps, self.irreps_edge_attr, ir)
+                ]
+            )
+            ir = "0e" if tp_path_exists(node_irreps, self.irreps_edge_attr, "0e") else "0o"
+            irreps_gates = o3.Irreps([(mul, ir) for mul, _ in irreps_gated])
+
+            conv_gate = Gate(
+                irreps_scalars,
+                [act[ir.p] for _, ir in irreps_scalars],  # scalar
+                irreps_gates,
+                [act_gates[ir.p] for _, ir in irreps_gates],  # gates (scalars)
+                irreps_gated,  # gated tensors
+            )
+            conv = Convolution(
+                node_irreps,
+                self.irreps_node_attr,
+                self.irreps_edge_attr,
+                conv_gate.irreps_in,
+                number_of_basis,
+                radial_layers,
+                radial_neurons,
+                avg_degree,
+            )
+            node_irreps = conv_gate.irreps_out
+            self.layers.append(Compose(conv, conv_gate))
+
+        # Final convolutions
+        self.global_layers.append(
+            VirtualNodeConvolution(
+                virtual_irreps,
+                node_irreps,
+                virtual_irreps,
+                node_irreps,
+                self.irreps_edge_attr,
+                avg_nodes,
+            )
+        )
+        self.layers.append(
+            Convolution(
+                node_irreps,
+                self.irreps_node_attr,
+                self.irreps_edge_attr,
+                self.irreps_out,
+                number_of_basis,
+                radial_layers,
+                radial_neurons,
+                avg_degree,
+            )
+        )
+
+        self.out_embed = torch.nn.Linear(
+            self.irreps_out.count((0, 1)) + self.irreps_out.count((0, -1)),
+            self.output_dim,
+        )
+
+    def forward(self, data: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """evaluate the network
+
+        Parameters
+        ----------
+        data : `torch_geometric.data.Data` or dict
+            data object containing
+            - ``pos`` the position of the nodes (atoms)
+            - ``x`` the input features of the nodes, optional
+            - ``z`` the attributes of the nodes, for instance the atom type, optional
+            - ``batch`` the graph to which the node belong, optional
+        """
+        if "batch" in data:
+            batch = data["batch"]
+        else:
+            batch = data["pos"].new_zeros(data["pos"].shape[0], dtype=torch.long)
+
+        edge_index = data.edge_index
+        if "edge_index" not in data or edge_index is None:
+            edge_index = radius_graph(data["pos"], self.max_radius, batch)
+        edge_src = edge_index[0]
+        edge_dst = edge_index[1]
+        edge_vec = data["pos"][edge_src] - data["pos"][edge_dst]
+        edge_sh = o3.spherical_harmonics(
+            self.irreps_edge_attr, edge_vec, True, normalization="component"
+        )
+        edge_length = torch.clamp(
+            edge_vec.norm(dim=1), min=self.eps, max=self.max_radius - self.eps
+        )
+        edge_length_embedded = soft_one_hot_linspace(
+            x=edge_length,
+            start=0.0,
+            end=self.max_radius,
+            number=self.number_of_basis,
+            basis="gaussian",
+            cutoff=False,
+        ).mul(self.number_of_basis ** 0.5)
+        edge_attr = smooth_cutoff(edge_length / self.max_radius)[:, None] * edge_sh
+
+        node_vec = data["pos"]
+        node_sh = o3.spherical_harmonics(
+            self.irreps_edge_attr, node_vec, True, normalization="component"
+        )
+        node_length = torch.clamp(
+            node_vec.norm(dim=1), min=self.eps, max=self.max_pos_norm - self.eps
+        )
+        node_pos_sh = smooth_cutoff(node_length / self.max_pos_norm)[:, None] * node_sh
+
+        if self.input_has_node_in and "atomic_numbers_one_hot" in data:
+            assert self.irreps_in is not None
+            x = data["atomic_numbers_one_hot"]
+            x = self.one_hot_embedding(x)
+        elif self.input_has_node_in and "x" in data:
+            assert self.irreps_in is not None
+            x = data["x"]
+        else:
+            assert self.irreps_in is None
+            x = data["pos"].new_ones((data["pos"].shape[0], 1))
+
+        if self.input_has_node_attr and "z" in data:
+            z = data["z"]
+        else:
+            assert self.irreps_node_attr == o3.Irreps("0e")
+            z = data["pos"].new_ones((data["pos"].shape[0], 1))
+
+        # Add node pos irreps to node irreps
+        x = torch.cat([x, node_pos_sh], dim=-1)
+
+        # Initialize virtual node as zeros
+        x_virtual = torch.zeros((data.batch.max().item()+1, x.shape[1]), device=x.device, dtype=x.dtype)
+
+        # Perform convolutions
+        for lay, global_lay in zip(self.layers, self.global_layers):
+            x_virtual, x = global_lay(x_virtual, x, node_pos_sh, data.batch)
+            x = lay(x, z, edge_src, edge_dst, edge_attr, edge_length_embedded)
+
+        return self.out_embed(x)
+
+
+
+# WORKS NOTES
+## Setup
+### 4 layers, dims [40, 20, 3]
+### All samples
+### pos_irreps not catted to node_irreps
+## Network
+### all TPs... having the sc TP seemed necessary
+## VirtualNodeConvolution
+### no linear message (only TP message)
+### m_n2v = self.v2n_tp(x_node, node_pos_sh)
+### m_v2n = self.n2v_lin(x_virtual[batch])
+### no tensor product normalization
+### yes activations with Tanh
+## Observations
+### Signs clearly shown on epoch 3, maybe even on 2

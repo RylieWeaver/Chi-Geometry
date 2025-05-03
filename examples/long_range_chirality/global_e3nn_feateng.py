@@ -17,6 +17,7 @@ from examples.utils import (
     global_connect_feat_eng,
     get_avg_degree,
     get_avg_nodes,
+    get_max_distance,
 )
 from experiment_utils.utils import create_hop_distance_datasets
 
@@ -70,6 +71,7 @@ def main():
         # Get statistics
         avg_degree = get_avg_degree(train_dataset)
         avg_nodes = get_avg_nodes(train_dataset)
+        max_radius = get_max_distance(train_dataset) * 1.01
 
         # Model
         modelname = f"global_e3nn_feateng"
@@ -80,7 +82,6 @@ def main():
         model_args[
             "layers"
         ] = 4  # 4 is enough to propagate chirality information with global connections
-        model_args["max_radius"] = 2.5 * (dist + 1)
         model = CustomNetwork(
             irreps_in=o3.Irreps(model_args["irreps_in"]),
             irreps_hidden=o3.Irreps(model_args["irreps_hidden"]),
@@ -88,7 +89,7 @@ def main():
             irreps_node_attr=o3.Irreps(model_args["irreps_node_attr"]),
             irreps_edge_attr=o3.Irreps(model_args["irreps_edge_attr"]),
             layers=model_args["layers"],
-            max_radius=model_args["max_radius"],
+            max_radius=max_radius,
             number_of_basis=model_args["number_of_basis"],
             radial_layers=model_args["radial_layers"],
             radial_neurons=model_args["radial_neurons"],

@@ -16,7 +16,6 @@ from examples.utils import (
     train_val_test_model_classification,
     make_global_connections,
     get_avg_degree,
-    get_avg_nodes,
 )
 from experiment_utils.utils import create_hop_distance_datasets
 
