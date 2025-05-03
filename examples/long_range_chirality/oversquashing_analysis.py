@@ -15,6 +15,7 @@ from examples.utils import (
     load_model_json,
     process_batch,
     get_avg_degree,
+    get_max_distance,
 )
 from experiment_utils.utils import create_hop_distance_datasets
 
@@ -220,9 +221,9 @@ def main():
             dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/")
         else:
             dataset_path = os.path.join(f"{datadir}/{dist}-distance/")
-        train_dataset = torch.load(os.path.join(f"{dataset_path}/train.pt"))
-        val_dataset = torch.load(os.path.join(f"{dataset_path}/val.pt"))
-        test_dataset = torch.load(os.path.join(f"{dataset_path}/test.pt"))
+        train_dataset = torch.load(os.path.join(f"{dataset_path}/train.pt"), weights_only=False)
+        val_dataset = torch.load(os.path.join(f"{dataset_path}/val.pt"), weights_only=False)
+        test_dataset = torch.load(os.path.join(f"{dataset_path}/test.pt"), weights_only=False)
         print(
             f"Datasets Loaded with Train: {len(train_dataset)}, "
             f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"
@@ -230,6 +231,7 @@ def main():
 
         # Get statistics
         avg_degree = get_avg_degree(train_dataset)
+        max_radius = get_max_distance(train_dataset) * 1.01
 
         # Model
         modelname = f"local_e3nn"
@@ -247,7 +249,7 @@ def main():
             irreps_node_attr=o3.Irreps(model_args["irreps_node_attr"]),
             irreps_edge_attr=o3.Irreps(model_args["irreps_edge_attr"]),
             layers=model_args["layers"],
-            max_radius=model_args["max_radius"],
+            max_radius=max_radius,
             number_of_basis=model_args["number_of_basis"],
             radial_layers=model_args["radial_layers"],
             radial_neurons=model_args["radial_neurons"],
