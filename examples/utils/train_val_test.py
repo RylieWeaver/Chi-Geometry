@@ -43,7 +43,6 @@ def train_val_test_model_classification(
         mode="min",
         factor=0.5,
         patience=25,
-        verbose=True,
         min_lr=model_args["lr"] / 1e3,
     )
 

@@ -52,9 +52,9 @@ def main():
             dataset_path = os.path.join(f"{datadir}/noise-{dist}-distance/")
         else:
             dataset_path = os.path.join(f"{datadir}/{dist}-distance/")
-        train_dataset = torch.load(os.path.join(f"{dataset_path}/train.pt"))
-        val_dataset = torch.load(os.path.join(f"{dataset_path}/val.pt"))
-        test_dataset = torch.load(os.path.join(f"{dataset_path}/test.pt"))
+        train_dataset = torch.load(os.path.join(f"{dataset_path}/train.pt"), weights_only=False)
+        val_dataset = torch.load(os.path.join(f"{dataset_path}/val.pt"), weights_only=False)
+        test_dataset = torch.load(os.path.join(f"{dataset_path}/test.pt"), weights_only=False)
         print(
             f"Datasets Loaded with Train: {len(train_dataset)}, "
             f"Val: {len(val_dataset)}, Test: {len(test_dataset)}\n"

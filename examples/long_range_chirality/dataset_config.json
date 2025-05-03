@@ -1,5 +1,5 @@
 {
-    "num_samples": 100000,
+    "num_samples": 25000,
     "chirality_type": "simple",
     "chirality_distance": 1,
     "species_range": 15

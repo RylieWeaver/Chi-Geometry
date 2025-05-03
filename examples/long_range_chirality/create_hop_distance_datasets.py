@@ -12,7 +12,7 @@ def main():
 
     # Create datasets
     dataset_config_path = os.path.join(script_dir, "dataset_config.json")
-    create_hop_distance_datasets(distances, dataset_config_path, datadir="datasets_100k")
+    create_hop_distance_datasets(distances, dataset_config_path, datadir="datasets")
 
 
 if __name__ == "__main__":
