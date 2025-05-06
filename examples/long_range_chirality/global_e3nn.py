@@ -16,7 +16,7 @@ from examples.utils import (
     train_val_test_model_classification,
     make_global_connections,
     get_avg_degree,
-    get_max_radius,
+    get_max_distance,
 )
 from experiment_utils.utils import create_hop_distance_datasets
 
@@ -63,7 +63,7 @@ def main():
 
         # Get statistics
         avg_degree = get_avg_degree(train_dataset)
-        max_radius = get_max_radius(train_dataset) * 1.01
+        max_radius = get_max_distance(train_dataset) * 1.01
 
         # Higher distances will have a lower proportion of chiral centers, so we weight chiral classifications at higher distances more
         num_classes = model_args["output_dim"]
