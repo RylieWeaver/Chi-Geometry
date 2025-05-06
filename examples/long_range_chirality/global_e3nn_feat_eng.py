@@ -71,7 +71,6 @@ def main():
 
         # Get statistics
         avg_degree = get_avg_degree(train_dataset)
-        avg_nodes = get_avg_nodes(train_dataset)
         max_radius = get_max_distance(train_dataset) * 1.01
 
         # Model
