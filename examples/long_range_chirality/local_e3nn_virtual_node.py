@@ -26,11 +26,7 @@ from experiment_utils.utils import create_hop_distance_datasets
 def main():
     # Setup
     script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-    # distances = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    # distances = [2, 8, 1, 3, 4, 5, 6, 7, 9]  # 25k
-    # distances = [2, 9, 3, 4, 5, 6, 7, 8]  # 100k
-    # Reverse distances
-    distances = [8]  # 100k reversed
+    distances = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
     # Create datasets
     # dataset_config_path = os.path.join(script_dir, "dataset_config.json")
@@ -40,7 +36,7 @@ def main():
     model_config_path = os.path.join(script_dir, "e3nn_local_model_virtual_node_config.json")
     model_args = load_model_json(model_config_path)
     noise = True
-    datadir = "datasets_100k"
+    datadir = "datasets"
     device = torch.device(
         "cuda" if model_args["use_cuda"] and torch.cuda.is_available() else "cpu"
     )
@@ -90,9 +86,9 @@ def main():
         # Model
         modelname = f"local_e3nn_virtual_node"
         if noise:
-            log_dir = f"logs_100k/noise-{dist}-distance-{modelname}"
+            log_dir = f"logs/noise-{dist}-distance-{modelname}"
         else:
-            log_dir = f"logs_100k/{dist}-distance-{modelname}"
+            log_dir = f"logs/{dist}-distance-{modelname}"
             model_args[
                 "layers"
             ] = 4  # 4 is enough to propagate chirality information when using a global virtual node
