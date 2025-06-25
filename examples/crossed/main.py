@@ -34,7 +34,6 @@ def main():
             chirality_type=dataset_args["chirality_type"],
             chirality_distance=dataset_args["chirality_distance"],
             species_range=dataset_args["species_range"],
-            points=dataset_args["points"],
         )
         if os.path.dirname(save_path):  # Check if there is a directory in the path
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
